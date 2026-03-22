@@ -13,6 +13,22 @@ dns.setServers(['8.8.8.8', '1.1.1.1'])
 // Load environment variables
 dotenv.config()
 
+// Validate required environment variables
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']
+const missingVars = requiredEnvVars.filter(env => !process.env[env])
+
+if (missingVars.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`)
+  process.exit(1)
+}
+
+// Warn about optional Razorpay credentials
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.warn('⚠️ RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are not set. Razorpay payment gateway will not be available.')
+} else {
+  console.log('✅ Razorpay credentials loaded successfully')
+}
+
 // Import config and middleware
 import './config/cloudinary.js'
 import { createRateLimiter } from './middleware/authMiddleware.js'

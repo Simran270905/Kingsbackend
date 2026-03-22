@@ -5,11 +5,25 @@ import Order from '../models/Order.js'
 import Cart from '../models/Cart.js'
 import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
-// Initialize Razorpay instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-})
+// Initialize Razorpay instance with lazy loading
+let razorpay = null
+
+const getRazorpayInstance = () => {
+  if (!razorpay) {
+    const keyId = process.env.RAZORPAY_KEY_ID
+    const keySecret = process.env.RAZORPAY_KEY_SECRET
+    
+    if (!keyId || !keySecret) {
+      throw new Error('Razorpay credentials (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET) are not configured. Please set them in environment variables.')
+    }
+    
+    razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret
+    })
+  }
+  return razorpay
+}
 
 // Create Razorpay Order
 export const createRazorpayOrder = catchAsync(async (req, res) => {
@@ -20,6 +34,8 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
   }
   
   try {
+    const razorpayInstance = getRazorpayInstance()
+    
     const options = {
       amount: Math.round(amount * 100), // Convert to paise
       currency,
@@ -27,7 +43,7 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
       payment_capture: 1 // Auto capture
     }
     
-    const razorpayOrder = await razorpay.orders.create(options)
+    const razorpayOrder = await razorpayInstance.orders.create(options)
     
     // Save payment record
     const payment = await Payment.create({
@@ -48,6 +64,10 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
       key_id: process.env.RAZORPAY_KEY_ID
     }, 201, 'Razorpay order created')
   } catch (error) {
+    // Check if it's a Razorpay credentials error
+    if (error.message && error.message.includes('Razorpay credentials')) {
+      return sendError(res, 'Payment gateway is not configured. Please contact support.', 503)
+    }
     sendError(res, error.message || 'Failed to create Razorpay order', 500)
   }
 })
@@ -92,7 +112,8 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     }
     
     // Fetch payment details from Razorpay to verify
-    const paymentDetails = await razorpay.payments.fetch(razorpayPaymentId)
+    const razorpayInstance = getRazorpayInstance()
+    const paymentDetails = await razorpayInstance.payments.fetch(razorpayPaymentId)
     
     if (paymentDetails.status !== 'captured') {
       return sendError(res, 'Payment was not captured by Razorpay', 400)
@@ -162,6 +183,10 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     }, 201, 'Order created successfully')
   } catch (error) {
     console.error('Payment verification error:', error)
+    // Check if it's a Razorpay credentials error
+    if (error.message && error.message.includes('Razorpay credentials')) {
+      return sendError(res, 'Payment gateway is not configured. Please contact support.', 503)
+    }
     sendError(res, error.message || 'Payment verification failed', 500)
   }
 })

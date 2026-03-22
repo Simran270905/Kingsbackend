@@ -1,0 +1,180 @@
+import dns from 'node:dns'
+import express from 'express'
+import mongoose from 'mongoose'
+import cors from 'cors'
+import compression from 'compression'
+import dotenv from 'dotenv'
+import helmet from 'helmet'
+import mongoSanitize from 'express-mongo-sanitize'
+
+// Force reliable DNS resolution
+dns.setServers(['8.8.8.8', '1.1.1.1'])
+
+// Load environment variables
+dotenv.config()
+
+// Import config and middleware
+import './config/cloudinary.js'
+import { createRateLimiter } from './middleware/authMiddleware.js'
+
+// Import routes
+import productRoutes from './routes/productRoutes.js'
+import orderRoutes from './routes/orderRoutes.js'
+import authRoutes from './routes/authRoutes.js'
+import uploadRoutes from './routes/uploadRoutes.js'
+import analyticsRoutes from './routes/analyticsRoutes.js'
+import contentRoutes from './routes/contentRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+import cartRoutes from './routes/cartRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
+import wishlistRoutes from './routes/wishlistRoutes.js'
+import couponRoutes from './routes/couponRoutes.js'
+import reviewRoutes from './routes/reviewRoutes.js'
+import brandRoutes from './routes/brandRoutes.js'
+import categoryRoutes from './routes/categoryRoutes.js'
+
+// Initialize app
+const app = express()
+
+// Middleware
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  process.env.CLIENT_URL || 'http://localhost:5173',
+  'http://localhost:3000',
+  'https://kkings-jewellery.vercel.app'
+]
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
+      scriptSrc: ["'self'"],
+    }
+  }
+}))
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true)
+    callback(new Error('Not allowed by CORS'))
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
+app.use(compression())
+
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ limit: '10mb', extended: true }))
+
+// Sanitize NoSQL injection attacks
+app.use(mongoSanitize())
+
+// Apply rate limiting
+app.use(createRateLimiter())
+
+// Routes
+app.use('/api/products', productRoutes)
+app.use('/api/orders', orderRoutes)
+app.use('/api/auth', authRoutes)
+app.use('/api/upload', uploadRoutes)
+app.use('/api/analytics', analyticsRoutes)
+app.use('/api/content', contentRoutes)
+app.use('/api/admin', adminRoutes)
+app.use('/api/customers', userRoutes)
+app.use('/api/cart', cartRoutes)
+app.use('/api/payments', paymentRoutes)
+app.use('/api/wishlist', wishlistRoutes)
+app.use('/api/coupons', couponRoutes)
+app.use('/api/reviews', reviewRoutes)
+app.use('/api/brands', brandRoutes)
+app.use('/api/categories', categoryRoutes)
+
+// Health check
+app.get('/', (req, res) => {
+  res.json({ 
+    message: '🔥 KKings Jewellery API Running',
+    status: 'active',
+    timestamp: new Date().toISOString()
+  })
+})
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  })
+})
+
+// Global error handler
+app.use((err, req, res, next) => {
+  const isDev = process.env.NODE_ENV !== 'production'
+  const status = err.status || err.statusCode || 500
+
+  if (status >= 500) {
+    console.error(`❌ [${new Date().toISOString()}] ${req.method} ${req.path} - ${err.message}`)
+  }
+
+  res.status(status).json({
+    success: false,
+    message: isDev ? err.message : (status < 500 ? err.message : 'Internal server error'),
+    ...(isDev && status >= 500 && { stack: err.stack })
+  })
+})
+
+// MongoDB Connection
+const connectDB = async () => {
+  try {
+    const uri = process.env.MONGO_URI
+    
+    if (!uri) {
+      throw new Error('MONGO_URI is missing from your .env file!')
+    }
+
+    const conn = await mongoose.connect(uri)
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`)
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:')
+    console.error(`Reason: ${err.message}`)
+    
+    if (err.message.includes('ECONNREFUSED')) {
+      console.log('💡 TIP: Check your MongoDB Atlas "Network Access" and ensure 0.0.0.0/0 is added.')
+    }
+    
+    process.exit(1)
+  }
+}
+
+connectDB()
+
+// Start server
+const PORT = process.env.PORT || 5000
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`)
+  console.log(`📝 API Documentation: http://localhost:${PORT}/api`)
+})
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.log(`❌ Error: ${err.message}`)
+  server.close(() => process.exit(1))
+})
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('📡 SIGTERM signal received: closing HTTP server')
+  server.close(() => {
+    console.log('HTTP server closed')
+    mongoose.connection.close(() => {
+      console.log('MongoDB connection closed')
+      process.exit(0)
+    })
+  })
+})
+
+export default app

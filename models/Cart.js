@@ -16,6 +16,15 @@ const cartSchema = new mongoose.Schema(
         },
         name: String,
         price: Number,
+        originalPrice: Number,
+        discountPercentage: {
+          type: Number,
+          default: 0
+        },
+        isOnSale: {
+          type: Boolean,
+          default: false
+        },
         quantity: {
           type: Number,
           default: 1,

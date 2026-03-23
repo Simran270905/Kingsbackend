@@ -9,6 +9,12 @@ import {
   deleteOrder,
   getOrderStats
 } from '../controllers/orderController.js'
+import {
+  markCODOrderAsPaid,
+  getCODOrdersPendingPayment,
+  getCODPaymentStats,
+  markMultipleCODAsPaid
+} from '../controllers/codController.js'
 import { protectAdmin } from '../middleware/authMiddleware.js'
 import { protectCustomer } from '../middleware/customerAuth.js'
 
@@ -19,9 +25,16 @@ router.get('/stats', getOrderStats)
 
 // Customer routes (authenticated customers)
 router.get('/my-orders', protectCustomer, getUserOrders)
+router.get('/:id/track', protectCustomer, getOrderById) // Allow customers to track their orders
 
 // Public order creation (for guest checkout)
 router.post('/', createOrder)
+
+// COD-specific routes (admin only)
+router.get('/cod/pending-payment', protectAdmin, getCODOrdersPendingPayment)
+router.get('/cod/payment-stats', protectAdmin, getCODPaymentStats)
+router.put('/:id/mark-cod-paid', protectAdmin, markCODOrderAsPaid)
+router.post('/cod/mark-multiple-paid', protectAdmin, markMultipleCODAsPaid)
 
 // Protected routes (admin only)
 router.get('/', protectAdmin, getOrders)

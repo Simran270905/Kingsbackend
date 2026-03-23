@@ -96,6 +96,15 @@ couponSchema.methods.isValid = function() {
 
 couponSchema.methods.canBeUsedBy = function(userId) {
   if (!this.isValid()) return false
+
+  // Check if user has already used this coupon (if userId is provided)
+  if (userId) {
+    const userUsage = this.usedBy.find(usage => usage.userId.toString() === userId.toString())
+    if (userUsage) {
+      return false // User has already used this coupon
+    }
+  }
+
   return true
 }
 

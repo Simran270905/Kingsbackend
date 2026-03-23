@@ -5,7 +5,7 @@ import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 // Get cart
 export const getCart = catchAsync(async (req, res) => {
   let cart = await Cart.findOne({ userId: req.user.userId })
-    .populate('items.productId', 'name price images stock')
+    .populate('items.productId', 'name price selling_price isOnSale discountPercentage images stock')
   
   if (!cart) {
     // Create empty cart if doesn't exist
@@ -55,13 +55,21 @@ export const addToCart = catchAsync(async (req, res) => {
       item.selectedSize === selectedSize
   )
   
+  // Calculate pricing
+  const originalPrice = product.price
+  const sellingPrice = product.selling_price || product.price
+  const discountPercentage = product.discountPercentage || 0
+  
   if (existingItem) {
     existingItem.quantity += quantity
   } else {
     cart.items.push({
       productId,
       name: product.name,
-      price: product.selling_price || product.price,
+      price: sellingPrice,
+      originalPrice,
+      discountPercentage,
+      isOnSale: product.isOnSale || false,
       quantity,
       selectedSize,
       image: product.images[0] || ''

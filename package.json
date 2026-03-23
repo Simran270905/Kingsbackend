@@ -6,7 +6,12 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "cleanup:dry-run": "node scripts/cleanupCloudinaryImages.js",
+    "cleanup:delete": "node scripts/cleanupCloudinaryImages.js --delete",
+    "cleanup:force": "node scripts/cleanupCloudinaryImages.js --delete --force",
+    "test:revenue": "node scripts/testRevenueValidation.js",
+    "audit:analytics": "node scripts/auditAnalyticsSystem.js"
   },
   "author": "KKings",
   "license": "ISC",

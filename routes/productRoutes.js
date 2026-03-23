@@ -6,7 +6,11 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  getProductStats
+  getProductStats,
+  updateBestSellerStatus,
+  updateSaleStatus,
+  getBestSellers,
+  getOnSaleProducts
 } from '../controllers/productController.js'
 import { protectAdmin } from '../middleware/authMiddleware.js'
 
@@ -16,11 +20,15 @@ const router = express.Router()
 router.get('/', getProducts)
 router.get('/stats', getProductStats)
 router.get('/category/:category', getProductsByCategory)
+router.get('/best-sellers', getBestSellers)
+router.get('/on-sale', getOnSaleProducts)
 router.get('/:id', getProductById)
 
 // Protected routes (admin only)
 router.post('/', protectAdmin, createProduct)
 router.put('/:id', protectAdmin, updateProduct)
 router.delete('/:id', protectAdmin, deleteProduct)
+router.patch('/:id/best-seller', protectAdmin, updateBestSellerStatus)
+router.patch('/:id/sale-status', protectAdmin, updateSaleStatus)
 
 export default router

@@ -43,6 +43,43 @@ const orderSchema = new mongoose.Schema(
       default: null
     },
     items: [orderItemSchema],
+    customer: {
+      firstName: {
+        type: String,
+        required: true
+      },
+      lastName: {
+        type: String,
+        required: true
+      },
+      email: {
+        type: String,
+        required: true,
+        match: /.+@.+\..+/
+      },
+      mobile: {
+        type: String,
+        required: true,
+        match: /^[0-9]{10}$/
+      },
+      streetAddress: {
+        type: String,
+        required: true
+      },
+      city: {
+        type: String,
+        required: true
+      },
+      state: {
+        type: String,
+        required: true
+      },
+      zipCode: {
+        type: String,
+        required: true,
+        match: /^[0-9]{6}$/
+      }
+    },
     shippingAddress: {
       firstName: {
         type: String,
@@ -137,6 +174,15 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    amountPaid: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    paymentDate: {
+      type: Date,
+      default: null
+    },
     notes: {
       type: String,
       trim: true,
@@ -145,6 +191,19 @@ const orderSchema = new mongoose.Schema(
     trackingNumber: {
       type: String,
       default: null
+    },
+    shipmentId: {
+      type: String,
+      default: null
+    },
+    trackingUrl: {
+      type: String,
+      default: null
+    },
+    shippingStatus: {
+      type: String,
+      enum: ['pending', 'created', 'failed'],
+      default: 'pending'
     },
     estimatedDelivery: {
       type: Date,
@@ -167,6 +226,7 @@ const orderSchema = new mongoose.Schema(
 )
 
 orderSchema.index({ 'customer.email': 1 })
+orderSchema.index({ 'shippingAddress.email': 1 })
 orderSchema.index({ status: 1, createdAt: -1 })
 orderSchema.index({ createdAt: -1 })
 

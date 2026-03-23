@@ -14,6 +14,11 @@ export const loginAdmin = catchAsync(async (req, res) => {
 
   // Compare password - supports both bcrypt hash and plain text
   const storedPassword = process.env.ADMIN_PASSWORD
+  console.log('🔍 Debug - Stored password from env:', storedPassword)
+  console.log('🔍 Debug - Submitted password:', password)
+  console.log('🔍 Debug - Stored password length:', storedPassword?.length)
+  console.log('🔍 Debug - Submitted password length:', password?.length)
+  
   if (!storedPassword) {
     return sendError(res, 'Admin not configured', 500)
   }
@@ -21,6 +26,8 @@ export const loginAdmin = catchAsync(async (req, res) => {
   const isMatch = storedPassword.startsWith('$2')
     ? await bcryptjs.compare(password, storedPassword)
     : password === storedPassword
+
+  console.log('🔍 Debug - Password match result:', isMatch)
 
   if (!isMatch) {
     console.log('❌ Admin login failed - invalid password')

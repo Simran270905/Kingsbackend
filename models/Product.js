@@ -125,6 +125,25 @@ const productSchema = new mongoose.Schema(
     totalReviews: {
       type: Number,
       default: 0
+    },
+    isBestSeller: {
+      type: Boolean,
+      default: false
+    },
+    isOnSale: {
+      type: Boolean,
+      default: false
+    },
+    discountPercentage: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0
+    },
+    salesCount: {
+      type: Number,
+      default: 0,
+      min: 0
     }
   },
   { timestamps: true }
@@ -136,5 +155,9 @@ productSchema.index({ name: 'text', description: 'text', category: 'text' })
 productSchema.index({ category: 1, createdAt: -1 })
 // Active product filtering
 productSchema.index({ isActive: 1, createdAt: -1 })
+// Best seller and sale filtering indexes
+productSchema.index({ isBestSeller: 1, isActive: 1 })
+productSchema.index({ isOnSale: 1, isActive: 1 })
+productSchema.index({ salesCount: -1, isActive: 1 })
 
 export default mongoose.model('Product', productSchema)

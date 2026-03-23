@@ -26,12 +26,20 @@ const deleteCloudinaryImages = async (images = []) => {
 
 // GET all products with filters
 export const getProducts = catchAsync(async (req, res) => {
-  const { category, search, page = 1, limit = 20 } = req.query
+  const { category, search, page = 1, limit = 20, bestSeller, onSale } = req.query
   
   let query = { isActive: true }
   
   if (category) {
     query.category = category
+  }
+  
+  if (bestSeller === 'true') {
+    query.isBestSeller = true
+  }
+  
+  if (onSale === 'true') {
+    query.isOnSale = true
   }
   
   if (search) {
@@ -191,6 +199,14 @@ export const getProductStats = catchAsync(async (req, res) => {
     isActive: true 
   })
   const categories = await Product.distinct('category')
+  const bestSellers = await Product.countDocuments({ 
+    isBestSeller: true, 
+    isActive: true 
+  })
+  const onSaleProducts = await Product.countDocuments({ 
+    isOnSale: true, 
+    isActive: true 
+  })
   
   const avgPrice = await Product.aggregate([
     { $match: { isActive: true } },
@@ -201,6 +217,95 @@ export const getProductStats = catchAsync(async (req, res) => {
     totalProducts,
     lowStockProducts,
     categories,
+    bestSellers,
+    onSaleProducts,
     avgPrice: avgPrice[0]?.avgPrice || 0
   })
+})
+
+// UPDATE product best seller status
+export const updateBestSellerStatus = catchAsync(async (req, res) => {
+  const { id } = req.params
+  const { isBestSeller } = req.body
+
+  const product = await Product.findByIdAndUpdate(
+    id,
+    { isBestSeller },
+    { new: true, runValidators: true }
+  )
+  
+  if (!product) {
+    return sendError(res, 'Product not found', 404)
+  }
+  
+  sendSuccess(res, product, 200, `Product ${isBestSeller ? 'marked as' : 'unmarked as'} best seller`)
+})
+
+// UPDATE product sale status
+export const updateSaleStatus = catchAsync(async (req, res) => {
+  const { id } = req.params
+  const { isOnSale, discountPercentage, selling_price } = req.body
+
+  const updateData = { isOnSale }
+  
+  if (isOnSale) {
+    if (discountPercentage && discountPercentage > 0) {
+      updateData.discountPercentage = discountPercentage
+      // Calculate selling price based on discount percentage
+      const product = await Product.findById(id)
+      if (product) {
+        updateData.selling_price = product.price * (1 - discountPercentage / 100)
+      }
+    } else if (selling_price && selling_price > 0) {
+      updateData.selling_price = selling_price
+      // Calculate discount percentage
+      const product = await Product.findById(id)
+      if (product) {
+        updateData.discountPercentage = Math.round(((product.price - selling_price) / product.price) * 100)
+      }
+    }
+  } else {
+    updateData.discountPercentage = 0
+    updateData.selling_price = null
+  }
+
+  const product = await Product.findByIdAndUpdate(
+    id,
+    updateData,
+    { new: true, runValidators: true }
+  )
+  
+  if (!product) {
+    return sendError(res, 'Product not found', 404)
+  }
+  
+  sendSuccess(res, product, 200, `Product ${isOnSale ? 'marked as' : 'unmarked as'} on sale`)
+})
+
+// GET best sellers
+export const getBestSellers = catchAsync(async (req, res) => {
+  const { limit = 10 } = req.query
+  
+  const products = await Product.find({ 
+    isBestSeller: true, 
+    isActive: true 
+  })
+    .limit(parseInt(limit))
+    .sort({ salesCount: -1, createdAt: -1 })
+  
+  sendSuccess(res, products)
+})
+
+// GET on sale products
+export const getOnSaleProducts = catchAsync(async (req, res) => {
+  const { limit = 10 } = req.query
+  
+  const products = await Product.find({ 
+    isOnSale: true, 
+    isActive: true 
+  })
+    .limit(parseInt(limit))
+    .sort({ discountPercentage: -1, createdAt: -1 })
+  
+  sendSuccess(res, products)
 })

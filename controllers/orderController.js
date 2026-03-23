@@ -1,6 +1,7 @@
 import Order from '../models/Order.js'
 import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 import { validateOrder } from '../utils/validation.js'
+import shiprocketService from '../utils/shiprocketService.js'
 
 // GET all orders (Admin only)
 export const getOrders = catchAsync(async (req, res) => {
@@ -42,7 +43,22 @@ export const getOrderById = catchAsync(async (req, res) => {
     return sendError(res, 'Order not found', 404)
   }
 
-  sendSuccess(res, order)
+  // Get tracking information if shipment exists
+  let trackingInfo = null
+  if (order.shipmentId && order.shippingStatus === 'created') {
+    try {
+      trackingInfo = await shiprocketService.getTracking(order.shipmentId)
+    } catch (error) {
+      console.log('Tracking info not available:', error.message)
+    }
+  }
+
+  const orderResponse = {
+    ...order.toObject(),
+    trackingInfo
+  }
+
+  sendSuccess(res, orderResponse)
 })
 
 // GET user's orders (Customer only)
@@ -100,6 +116,7 @@ export const createOrder = catchAsync(async (req, res) => {
     tax = 0,
     shippingCost = 0,
     discount = 0,
+    couponCode = null,
     totalAmount,
     paymentMethod = 'cod',
     notes
@@ -132,7 +149,7 @@ export const createOrder = catchAsync(async (req, res) => {
     subtotal: item.subtotal || (item.price * item.quantity)
   }))
 
-  // Create order
+  // Create order with payment details
   const order = new Order({
     userId,
     items: transformedItems,
@@ -141,17 +158,57 @@ export const createOrder = catchAsync(async (req, res) => {
     tax,
     shippingCost,
     discount,
+    couponCode,
     totalAmount,
     paymentMethod,
-    notes,
+    paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
     status: 'pending',
-    paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid'
+    amountPaid: paymentMethod === 'cod' ? 0 : totalAmount, // COD orders start with 0 paid
+    paymentDate: paymentMethod === 'cod' ? null : new Date(), // COD orders have no payment date initially
+    notes: paymentMethod === 'cod' ? 'Cash on Delivery - Payment to be collected on delivery' : 'Order created successfully'
   })
 
   await order.save()
+  
+  console.log(`📦 Order created: ${order._id} | Method: ${paymentMethod} | Payment Status: ${order.paymentStatus} | Amount: ₹${totalAmount}`)
+
+  // Increment coupon usage if coupon was applied
+  if (couponCode && discount > 0) {
+    try {
+      const { incrementCouponUsage } = await import('./couponController.js')
+      await incrementCouponUsage(couponCode, userId)
+      console.log('✅ Coupon usage incremented for:', couponCode)
+    } catch (error) {
+      console.error('❌ Error incrementing coupon usage:', error)
+      // Don't fail the order creation for coupon increment errors
+    }
+  }
 
   // Populate user data for response
   await order.populate('userId', 'name email mobile')
+
+  // Create shipment with Shiprocket
+  try {
+    console.log('🚀 Creating shipment with Shiprocket for order:', order._id)
+    const shipmentResult = await shiprocketService.createOrder(order)
+
+    if (shipmentResult.status === 'created') {
+      order.shipmentId = shipmentResult.shipmentId
+      order.trackingUrl = shipmentResult.trackingUrl
+      order.shippingStatus = 'created'
+      order.trackingNumber = shipmentResult.shipmentId.toString()
+      await order.save()
+      console.log('✅ Shipment created successfully:', shipmentResult.shipmentId)
+    } else {
+      order.shippingStatus = 'failed'
+      await order.save()
+      console.log('❌ Shipment creation failed, marked as pending')
+    }
+  } catch (error) {
+    console.error('❌ Shiprocket integration error:', error.message)
+    order.shippingStatus = 'failed'
+    await order.save()
+  }
 
   console.log('✅ Order created successfully:', order._id)
 
@@ -219,21 +276,35 @@ export const deleteOrder = catchAsync(async (req, res) => {
 
 // GET order statistics
 export const getOrderStats = catchAsync(async (req, res) => {
+  console.log('📊 Fetching order statistics...')
+  
   const stats = {
     total: await Order.countDocuments(),
     pending: await Order.countDocuments({ status: 'pending' }),
+    confirmed: await Order.countDocuments({ status: 'confirmed' }),
     processing: await Order.countDocuments({ status: 'processing' }),
     shipped: await Order.countDocuments({ status: 'shipped' }),
     delivered: await Order.countDocuments({ status: 'delivered' }),
     cancelled: await Order.countDocuments({ status: 'cancelled' })
   }
   
+  // Revenue from PAID orders only
   const revenue = await Order.aggregate([
-    { $match: { status: 'delivered' } },
-    { $group: { _id: null, totalRevenue: { $sum: '$total' } } }
+    { $match: { paymentStatus: 'paid' } },
+    { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' } } }
   ])
   
   stats.revenue = revenue[0]?.totalRevenue || 0
+  
+  // Additional payment status stats
+  stats.paymentStatus = {
+    pending: await Order.countDocuments({ paymentStatus: 'pending' }),
+    paid: await Order.countDocuments({ paymentStatus: 'paid' }),
+    failed: await Order.countDocuments({ paymentStatus: 'failed' }),
+    refunded: await Order.countDocuments({ paymentStatus: 'refunded' })
+  }
+  
+  console.log(`✅ Order stats - Total: ${stats.total}, Revenue: ₹${stats.revenue}, Paid: ${stats.paymentStatus.paid}`)
   
   sendSuccess(res, stats)
 })

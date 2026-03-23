@@ -49,6 +49,10 @@ import couponRoutes from './routes/couponRoutes.js'
 import reviewRoutes from './routes/reviewRoutes.js'
 import brandRoutes from './routes/brandRoutes.js'
 import categoryRoutes from './routes/categoryRoutes.js'
+import enhancedOrderRoutes from './routes/enhancedOrderRoutes.js'
+
+// Import quick fix controller
+import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/quickFixController.js'
 
 // Initialize app
 const app = express()
@@ -110,6 +114,11 @@ app.use('/api/coupons', couponRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/brands', brandRoutes)
 app.use('/api/categories', categoryRoutes)
+app.use('/api/admin/orders', enhancedOrderRoutes) // Enhanced order routes
+
+// Quick fix routes (temporary)
+app.get('/api/fix/status', getCurrentStatus)
+app.get('/api/fix/delivered-cod', fixDeliveredCODOrders)
 
 // Health check
 app.get('/', (req, res) => {

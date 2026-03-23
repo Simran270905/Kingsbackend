@@ -68,10 +68,10 @@ export const validateCoupon = async (req, res) => {
       })
     }
 
-    if (!coupon.isValid()) {
+    if (!coupon.canBeUsedBy(userId)) {
       return res.status(400).json({
         success: false,
-        message: 'Coupon has expired or is no longer valid'
+        message: 'You have already used this coupon or it is no longer available'
       })
     }
 
@@ -90,6 +90,11 @@ export const validateCoupon = async (req, res) => {
       }
     } else {
       discountAmount = coupon.discountValue
+    }
+
+    // Ensure discount doesn't exceed order amount
+    if (discountAmount > orderAmount) {
+      discountAmount = orderAmount
     }
 
     res.json({
@@ -166,7 +171,9 @@ export const incrementCouponUsage = async (couponCode, userId) => {
     const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() })
     if (coupon) {
       coupon.usedCount += 1
-      coupon.usedBy.push({ userId })
+      if (userId) {
+        coupon.usedBy.push({ userId })
+      }
       await coupon.save()
     }
   } catch (error) {

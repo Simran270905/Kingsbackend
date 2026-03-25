@@ -5,28 +5,38 @@ import { generateOTP, hashOTP, verifyOTP, sendEmailOTP, sendSMSOTP } from '../ut
 
 // Send OTP
 export const sendOTP = catchAsync(async (req, res) => {
+  console.log('📧 Send OTP request received:', req.body)
+  
   const { name, email, phone } = req.body
 
   // Validation
   if (!name || !email) {
+    console.log('❌ Validation failed: missing name or email')
     return sendError(res, 'Name and email are required', 400)
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.log('❌ Validation failed: invalid email format')
     return sendError(res, 'Please enter a valid email address', 400)
   }
 
   if (phone && !/^[0-9]{10}$/.test(phone)) {
+    console.log('❌ Validation failed: invalid phone format')
     return sendError(res, 'Please enter a valid 10-digit phone number', 400)
   }
 
+  console.log('✅ Validation passed, processing OTP request for:', email)
+
   // Check if user exists by email
   let user = await User.findOne({ email })
+  console.log('👤 User found:', !!user)
 
   // Generate OTP
   const otpCode = generateOTP()
   const hashedOTP = await hashOTP(otpCode)
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+
+  console.log('🔢 OTP generated:', otpCode)
 
   if (user) {
     // Existing user - update OTP and phone if provided
@@ -39,6 +49,7 @@ export const sendOTP = catchAsync(async (req, res) => {
       user.phone = phone
     }
     await user.save()
+    console.log('✅ Existing user updated with new OTP')
   } else {
     // New user - create account
     const firstName = name.split(' ')[0]
@@ -55,12 +66,26 @@ export const sendOTP = catchAsync(async (req, res) => {
         attempts: 0
       }
     })
+    console.log('✅ New user created with OTP')
   }
 
   // Send OTP via email only
   try {
+    console.log('📧 Sending OTP via email to:', email)
     await sendEmailOTP(email, otpCode, name)
+    console.log('✅ Email sent successfully')
   } catch (error) {
+    console.error('❌ Email sending failed:', error.message)
+    console.error('❌ Email error stack:', error.stack)
+    
+    // Don't fail the request if email fails, but log the error
+    // In development, we can still proceed without email
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 Development mode: OTP would be sent to email. For testing, OTP is:', otpCode)
+      sendSuccess(res, { otp: otpCode, message: 'OTP generated (development mode)' }, 200, 'OTP generated successfully')
+      return
+    }
+    
     return sendError(res, 'Failed to send OTP. Please try again.', 500)
   }
 

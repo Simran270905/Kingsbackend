@@ -1,7 +1,7 @@
 // Reset OTP attempts script
 // Run this to clear OTP attempts for a specific email
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 async function resetOTPAttempts(email) {
   try {
@@ -27,6 +27,6 @@ async function resetOTPAttempts(email) {
 }
 
 // Replace with your email address
-const email = 'your-email@example.com'; // Change this to your email
+const email = 'harshrawal1144@gmail.com'; // Change this to your email
 
 resetOTPAttempts(email);

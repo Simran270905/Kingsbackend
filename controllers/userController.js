@@ -1,122 +1,49 @@
+import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 import Order from '../models/Order.js'
 import jwt from 'jsonwebtoken'
 import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
-// Register user
-export const register = catchAsync(async (req, res) => {
-  const { firstName, lastName, email, phone, password, passwordConfirm } = req.body
-  
-  // Validation
-  if (!firstName || !lastName || !email || !phone || !password) {
-    return sendError(res, 'All fields are required', 400)
-  }
-  
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
-  if (!passwordRegex.test(password)) {
-    return sendError(res, 'Password must be at least 8 characters and include uppercase, lowercase, and a number', 400)
-  }
-  
-  if (password !== passwordConfirm) {
-    return sendError(res, 'Passwords do not match', 400)
-  }
-  
-  // Check if user already exists
-  const existingUser = await User.findOne({ email })
-  if (existingUser) {
-    return sendError(res, 'Email already registered', 400)
-  }
-  
-  // Create user
-  const user = await User.create({
-    firstName,
-    lastName,
-    email,
-    phone,
-    password
-  })
-  
-  // Generate JWT token
-  const token = jwt.sign(
-    { 
-      userId: user._id,
-      email: user.email,
-      role: 'customer'
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  )
-  
-  // Remove password from response
-  user.password = undefined
-  
-  sendSuccess(res, { 
-    token, 
-    user: {
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone
-    }
-  }, 201, 'Registration successful')
-})
+// Change customer password
+export const changePassword = catchAsync(async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body
 
-// Login user
-export const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body
-  
-  if (!email || !password) {
-    return sendError(res, 'Email and password are required', 400)
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return sendError(res, 'Current password, new password, and confirm password are required', 400)
   }
-  
-  // Find user and include password field
-  const user = await User.findOne({ email }).select('+password')
-  
+
+  if (newPassword !== confirmPassword) {
+    return sendError(res, 'New password and confirm password must match', 400)
+  }
+
+  if (newPassword.length < 6) {
+    return sendError(res, 'New password must be at least 6 characters', 400)
+  }
+
+  const user = await User.findById(req.user.userId).select('+password')
+
   if (!user) {
-    return sendError(res, 'Invalid email or password', 401)
+    return sendError(res, 'User not found', 404)
   }
-  
-  // Check password
-  const isPasswordValid = await user.comparePassword(password)
-  
-  if (!isPasswordValid) {
-    return sendError(res, 'Invalid email or password', 401)
+
+  if (!user.password) {
+    return sendError(res, 'Password not set for user. Please set password through account settings or use OTP login workflow.', 400)
   }
-  
-  // Update last login
-  user.lastLogin = new Date()
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password)
+  if (!isMatch) {
+    return sendError(res, 'Current password is incorrect', 401)
+  }
+
+  user.password = await bcrypt.hash(newPassword, 10)
   await user.save()
-  
-  // Generate token
-  const token = jwt.sign(
-    { 
-      userId: user._id,
-      email: user.email,
-      role: 'customer'
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  )
-  
-  // Remove password from response
-  user.password = undefined
-  
-  sendSuccess(res, {
-    token,
-    user: {
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone
-    }
-  }, 200, 'Login successful')
+
+  sendSuccess(res, null, 200, 'Password changed successfully')
 })
 
 // Get user profile
 export const getProfile = catchAsync(async (req, res) => {
-  const user = await User.findById(req.user.userId).select('-password')
+  const user = await User.findById(req.user.userId)
   
   if (!user) {
     return sendError(res, 'User not found', 404)
@@ -133,51 +60,13 @@ export const updateProfile = catchAsync(async (req, res) => {
     req.user.userId,
     { firstName, lastName, phone },
     { new: true, runValidators: true }
-  ).select('-password')
+  )
   
   if (!user) {
     return sendError(res, 'User not found', 404)
   }
   
   sendSuccess(res, user, 200, 'Profile updated successfully')
-})
-
-// Change password
-export const changePassword = catchAsync(async (req, res) => {
-  const { currentPassword, newPassword, confirmPassword } = req.body
-  
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    return sendError(res, 'All password fields are required', 400)
-  }
-  
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
-  if (!passwordRegex.test(newPassword)) {
-    return sendError(res, 'Password must be at least 8 characters and include uppercase, lowercase, and a number', 400)
-  }
-  
-  if (newPassword !== confirmPassword) {
-    return sendError(res, 'Passwords do not match', 400)
-  }
-  
-  // Get user with password field
-  const user = await User.findById(req.user.userId).select('+password')
-  
-  if (!user) {
-    return sendError(res, 'User not found', 404)
-  }
-  
-  // Verify current password
-  const isPasswordValid = await user.comparePassword(currentPassword)
-  
-  if (!isPasswordValid) {
-    return sendError(res, 'Current password is incorrect', 401)
-  }
-  
-  // Update password
-  user.password = newPassword
-  await user.save()
-  
-  sendSuccess(res, null, 200, 'Password changed successfully')
 })
 
 // Get user addresses
@@ -224,7 +113,7 @@ export const addAddress = catchAsync(async (req, res) => {
 
   await user.save()
 
-  const updatedUser = await User.findById(req.user.userId).select('-password')
+  const updatedUser = await User.findById(req.user.userId)
   sendSuccess(res, updatedUser, 201, 'Address added successfully')
 })
 
@@ -256,7 +145,6 @@ export const getOrderHistory = catchAsync(async (req, res) => {
 // Admin: Get all customers
 export const getAllCustomers = catchAsync(async (req, res) => {
   const customers = await User.find({})
-    .select('-password')
     .sort({ createdAt: -1 })
   sendSuccess(res, customers)
 })

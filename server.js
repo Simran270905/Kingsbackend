@@ -22,6 +22,13 @@ if (missingVars.length > 0) {
   process.exit(1)
 }
 
+// Warn about optional email credentials
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  console.warn('⚠️ EMAIL_USER and EMAIL_PASS are not set. Email OTP service will not be available.')
+} else {
+  console.log('✅ Email credentials loaded successfully')
+}
+
 // Warn about optional Razorpay credentials
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
   console.warn('⚠️ RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are not set. Razorpay payment gateway will not be available.')
@@ -37,6 +44,7 @@ import { createRateLimiter } from './middleware/authMiddleware.js'
 import productRoutes from './routes/productRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import authRoutes from './routes/authRoutes.js'
+import otpRoutes from './routes/otpRoutes.js'
 import uploadRoutes from './routes/uploadRoutes.js'
 import analyticsRoutes from './routes/analyticsRoutes.js'
 import contentRoutes from './routes/contentRoutes.js'
@@ -107,6 +115,7 @@ app.use(createRateLimiter())
 app.use('/api/products', productRoutes)
 app.use('/api/orders', orderRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/otp', otpRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/content', contentRoutes)

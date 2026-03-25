@@ -1,5 +1,4 @@
 import mongoose from 'mongoose'
-import bcryptjs from 'bcryptjs'
 
 const userSchema = new mongoose.Schema(
   {
@@ -15,21 +14,34 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
+      required: [true, 'Email is required for authentication'],
       unique: true,
       lowercase: true,
       match: [/.+@.+\..+/, 'Please enter a valid email']
     },
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
+      required: false,
+      unique: true,
+      sparse: true,
       match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
-      select: false // Don't include in queries by default
+      required: false,
+      select: false
+    },
+    verified: {
+      type: Boolean,
+      default: false
+    },
+    otp: {
+      code: String,
+      expiresAt: Date,
+      attempts: {
+        type: Number,
+        default: 0
+      }
     },
     addresses: [
       {
@@ -66,24 +78,6 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next()
-  
-  try {
-    const salt = await bcryptjs.genSalt(10)
-    this.password = await bcryptjs.hash(this.password, salt)
-    next()
-  } catch (error) {
-    next(error)
-  }
-})
-
-// Method to compare passwords
-userSchema.methods.comparePassword = async function(passwordToCheck) {
-  return await bcryptjs.compare(passwordToCheck, this.password)
-}
 
 userSchema.index({ isActive: 1 })
 

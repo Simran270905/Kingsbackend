@@ -81,7 +81,6 @@ const couponSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-couponSchema.index({ code: 1 })
 couponSchema.index({ isActive: 1, validUntil: 1 })
 
 couponSchema.methods.isValid = function() {

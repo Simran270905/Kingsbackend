@@ -1,7 +1,5 @@
 import express from 'express'
 import {
-  register,
-  login,
   getProfile,
   updateProfile,
   changePassword,
@@ -11,14 +9,11 @@ import {
   getOrderHistory
 } from '../controllers/userController.js'
 import { protectCustomer } from '../middleware/customerAuth.js'
-import { loginRateLimiter } from '../middleware/authMiddleware.js'
-import { validateRegister, validateLogin } from '../middleware/validateRequest.js'
 
 const router = express.Router()
 
-// Public routes
-router.post('/register', loginRateLimiter, validateRegister, register)
-router.post('/login', loginRateLimiter, validateLogin, login)
+// Note: Authentication is handled via OTP routes at /api/otp
+// These routes are for authenticated users only
 
 // Protected routes (require authentication)
 router.get('/profile', protectCustomer, getProfile)

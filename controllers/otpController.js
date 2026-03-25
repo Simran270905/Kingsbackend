@@ -1,0 +1,189 @@
+import User from '../models/User.js'
+import jwt from 'jsonwebtoken'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
+import { generateOTP, hashOTP, verifyOTP, sendEmailOTP, sendSMSOTP } from '../utils/otpService.js'
+
+// Send OTP
+export const sendOTP = catchAsync(async (req, res) => {
+  const { name, email, phone } = req.body
+
+  // Validation
+  if (!name || !email) {
+    return sendError(res, 'Name and email are required', 400)
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return sendError(res, 'Please enter a valid email address', 400)
+  }
+
+  if (phone && !/^[0-9]{10}$/.test(phone)) {
+    return sendError(res, 'Please enter a valid 10-digit phone number', 400)
+  }
+
+  // Check if user exists by email
+  let user = await User.findOne({ email })
+
+  // Generate OTP
+  const otpCode = generateOTP()
+  const hashedOTP = await hashOTP(otpCode)
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+
+  if (user) {
+    // Existing user - update OTP and phone if provided
+    user.otp = {
+      code: hashedOTP,
+      expiresAt,
+      attempts: 0
+    }
+    if (phone && phone !== user.phone) {
+      user.phone = phone
+    }
+    await user.save()
+  } else {
+    // New user - create account
+    const firstName = name.split(' ')[0]
+    const lastName = name.split(' ').slice(1).join(' ') || ''
+    
+    user = await User.create({
+      firstName,
+      lastName,
+      email,
+      phone: phone || undefined,
+      otp: {
+        code: hashedOTP,
+        expiresAt,
+        attempts: 0
+      }
+    })
+  }
+
+  // Send OTP via email only
+  try {
+    await sendEmailOTP(email, otpCode, name)
+  } catch (error) {
+    return sendError(res, 'Failed to send OTP. Please try again.', 500)
+  }
+
+  sendSuccess(res, null, 200, 'OTP sent successfully')
+})
+
+// Verify OTP
+export const verifyOTPController = catchAsync(async (req, res) => {
+  const { email, otp } = req.body
+
+  // Validation
+  if (!email || !otp) {
+    return sendError(res, 'Email and OTP are required', 400)
+  }
+
+  if (!/^[0-9]{4,6}$/.test(otp)) {
+    return sendError(res, 'Invalid OTP format', 400)
+  }
+
+  // Find user by email
+  const user = await User.findOne({ email })
+
+  if (!user) {
+    return sendError(res, 'User not found', 404)
+  }
+
+  // Check if OTP exists and is not expired
+  if (!user.otp || !user.otp.code || !user.otp.expiresAt) {
+    return sendError(res, 'No OTP request found. Please request a new OTP.', 400)
+  }
+
+  if (new Date() > user.otp.expiresAt) {
+    return sendError(res, 'OTP has expired. Please request a new OTP.', 400)
+  }
+
+  // Check attempts limit (max 3 attempts)
+  if (user.otp.attempts >= 3) {
+    return sendError(res, 'Too many failed attempts. Please request a new OTP.', 400)
+  }
+
+  // Verify OTP
+  const isValidOTP = await verifyOTP(otp, user.otp.code)
+  
+  if (!isValidOTP) {
+    // Increment attempts
+    user.otp.attempts += 1
+    await user.save()
+    
+    const remainingAttempts = 3 - user.otp.attempts
+    if (remainingAttempts > 0) {
+      return sendError(res, `Invalid OTP. ${remainingAttempts} attempts remaining.`, 400)
+    } else {
+      return sendError(res, 'Too many failed attempts. Please request a new OTP.', 400)
+    }
+  }
+
+  // OTP is valid - authenticate user
+  user.verified = true
+  user.lastLogin = new Date()
+  user.otp = undefined // Clear OTP
+  await user.save()
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { 
+      userId: user._id,
+      email: user.email,
+      phone: user.phone,
+      role: 'customer'
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  )
+
+  sendSuccess(res, {
+    token,
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      verified: user.verified
+    }
+  }, 200, 'Authentication successful')
+})
+
+// Resend OTP
+export const resendOTP = catchAsync(async (req, res) => {
+  const { email } = req.body
+
+  // Validation
+  if (!email) {
+    return sendError(res, 'Email is required', 400)
+  }
+
+  // Find user by email
+  const user = await User.findOne({ email })
+
+  if (!user) {
+    return sendError(res, 'User not found', 404)
+  }
+
+  // Generate new OTP
+  const otpCode = generateOTP()
+  const hashedOTP = await hashOTP(otpCode)
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+
+  // Update user OTP
+  user.otp = {
+    code: hashedOTP,
+    expiresAt,
+    attempts: 0
+  }
+  await user.save()
+
+  // Send OTP via email only
+  try {
+    const fullName = `${user.firstName} ${user.lastName}`.trim()
+    await sendEmailOTP(email, otpCode, fullName)
+  } catch (error) {
+    return sendError(res, 'Failed to send OTP. Please try again.', 500)
+  }
+
+  sendSuccess(res, null, 200, 'OTP resent successfully')
+})

@@ -92,11 +92,12 @@ export const verifyOTPController = catchAsync(async (req, res) => {
     return sendError(res, 'No OTP request found. Please request a new OTP.', 400)
   }
 
+  // Check if OTP has expired
   if (new Date() > user.otp.expiresAt) {
     return sendError(res, 'OTP has expired. Please request a new OTP.', 400)
   }
 
-  // Check attempts limit (max 3 attempts)
+  // Check if too many attempts
   if (user.otp.attempts >= 3) {
     return sendError(res, 'Too many failed attempts. Please request a new OTP.', 400)
   }
@@ -146,6 +147,26 @@ export const verifyOTPController = catchAsync(async (req, res) => {
       verified: user.verified
     }
   }, 200, 'Authentication successful')
+})
+
+// Reset OTP attempts (for development/testing)
+export const resetOTPAttempts = catchAsync(async (req, res) => {
+  const { email } = req.body
+
+  if (!email) {
+    return sendError(res, 'Email is required', 400)
+  }
+
+  const user = await User.findOne({ email })
+  if (!user) {
+    return sendError(res, 'User not found', 404)
+  }
+
+  // Clear OTP and reset attempts
+  user.otp = undefined
+  await user.save()
+
+  sendSuccess(res, null, 200, 'OTP attempts reset successfully')
 })
 
 // Resend OTP

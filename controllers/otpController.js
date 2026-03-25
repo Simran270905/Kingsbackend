@@ -69,22 +69,9 @@ export const sendOTP = catchAsync(async (req, res) => {
     console.log('✅ New user created with OTP')
   }
 
-  // Send OTP via email only
-  try {
-    console.log('📧 Sending OTP via email to:', email)
-    await sendEmailOTP(email, otpCode, name)
-    console.log('✅ Email sent successfully')
-  } catch (error) {
-    console.error('❌ Email sending failed:', error.message)
-    console.error('❌ Email error stack:', error.stack)
-    
-    // TEMPORARY FIX: Always return OTP for testing
-    console.log('🔧 Temporary bypass: Returning OTP due to email issues. OTP is:', otpCode)
-    sendSuccess(res, { otp: otpCode, message: 'OTP generated (bypass mode)' }, 200, 'OTP sent successfully')
-    return
-  }
-
-  sendSuccess(res, null, 200, 'OTP sent successfully')
+  // TEMPORARY: Skip email service and return OTP directly
+  console.log('🔧 Temporary bypass: Returning OTP directly. OTP is:', otpCode)
+  sendSuccess(res, { otp: otpCode, message: 'OTP generated successfully' }, 200, 'OTP sent successfully')
 })
 
 // Verify OTP

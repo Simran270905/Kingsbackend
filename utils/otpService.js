@@ -27,14 +27,27 @@ const createEmailTransporter = () => {
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
+    },
+    // Add timeout and connection settings
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,     // 5 seconds
+    socketTimeout: 10000,      // 10 seconds
+    tls: {
+      rejectUnauthorized: false // Allow self-signed certificates
     }
   })
 }
 
-// Send OTP via email
+// Send OTP via email with better error handling
 export const sendEmailOTP = async (email, otp, name) => {
   try {
+    console.log('📧 Attempting to send email to:', email)
+    
     const transporter = createEmailTransporter()
+    
+    // Verify transporter connection first
+    await transporter.verify()
+    console.log('✅ Email transporter verified')
     
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -61,11 +74,17 @@ export const sendEmailOTP = async (email, otp, name) => {
       `
     }
     
-    await transporter.sendMail(mailOptions)
+    const result = await transporter.sendMail(mailOptions)
+    console.log('✅ Email sent successfully:', result.messageId)
     return true
   } catch (error) {
-    console.error('Error sending email OTP:', error)
-    throw new Error('Failed to send OTP via email')
+    console.error('❌ Email sending failed:', error.message)
+    console.error('❌ Email error details:', {
+      code: error.code,
+      command: error.command,
+      response: error.response
+    })
+    throw new Error(`Email service failed: ${error.message}`)
   }
 }
 

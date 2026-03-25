@@ -69,9 +69,41 @@ export const sendOTP = catchAsync(async (req, res) => {
     console.log('✅ New user created with OTP')
   }
 
-  // TEMPORARY: Skip email service and return OTP directly
-  console.log('🔧 Temporary bypass: Returning OTP directly. OTP is:', otpCode)
-  sendSuccess(res, { otp: otpCode, message: 'OTP generated successfully' }, 200, 'OTP sent successfully')
+  // Send OTP via email with enhanced error handling
+  try {
+    console.log('📧 Attempting to send OTP via email to:', email)
+    await sendEmailOTP(email, otpCode, name)
+    console.log('✅ Email sent successfully')
+  } catch (error) {
+    console.error('❌ Email sending failed:', error.message)
+    
+    // Check if it's a timeout or connection issue
+    if (error.message.includes('timeout') || error.message.includes('connection') || error.message.includes('ECONN')) {
+      console.log('🔧 Email service timeout/connection issue - returning OTP in response')
+      sendSuccess(res, { 
+        otp: otpCode, 
+        message: 'OTP generated successfully (email service temporarily unavailable)',
+        emailSent: false 
+      }, 200, 'OTP sent successfully')
+      return
+    }
+    
+    // For other email errors, still return OTP but log the issue
+    console.log('🔧 Email service error - returning OTP in response. Error:', error.message)
+    sendSuccess(res, { 
+      otp: otpCode, 
+      message: 'OTP generated successfully',
+      emailSent: false,
+      emailError: error.message
+    }, 200, 'OTP sent successfully')
+    return
+  }
+
+  // If email was sent successfully
+  sendSuccess(res, { 
+    message: 'OTP sent successfully',
+    emailSent: true
+  }, 200, 'OTP sent successfully')
 })
 
 // Verify OTP

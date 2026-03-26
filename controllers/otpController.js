@@ -80,7 +80,9 @@ export const sendOTP = catchAsync(async (req, res) => {
     sendSuccess(res, { 
       message: 'OTP sent successfully to your email',
       emailSent: true,
-      messageId: emailResult.messageId
+      messageId: emailResult.messageId,
+      // For development: include OTP in response (remove in production)
+      otp: process.env.NODE_ENV === 'development' ? otpCode : undefined
     }, 200, 'OTP sent successfully')
     
   } catch (error) {
@@ -99,6 +101,16 @@ export const sendOTP = catchAsync(async (req, res) => {
     // Check if it's a connection error
     if (error.message.includes('connection') || error.message.includes('ECONNECTION') || error.message.includes('timeout')) {
       return sendError(res, 'Email service is temporarily unavailable. Please try again later.', 503)
+    }
+    
+    // For development: return OTP even if email fails
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️ Email failed but returning OTP for development')
+      return sendSuccess(res, {
+        message: 'Email service unavailable, but here is your OTP for development',
+        emailSent: false,
+        otp: otpCode
+      }, 200, 'OTP generated (development mode)')
     }
     
     // For any other email errors, return a generic error

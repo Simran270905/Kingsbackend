@@ -12,6 +12,7 @@ import reviewRoutes from './reviews.js'
 import couponRoutes from './coupons.js'
 import contentRoutes from './content.js'
 import healthRoutes from './health.js'
+import wishlistRoutes from './wishlist.js'
 
 const router = express.Router()
 
@@ -29,5 +30,6 @@ router.use('/reviews', reviewRoutes)
 router.use('/coupons', couponRoutes)
 router.use('/content', contentRoutes)
 router.use('/health', healthRoutes) // Health check endpoints
+router.use('/wishlist', wishlistRoutes) // Wishlist endpoints
 
 export default router

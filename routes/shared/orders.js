@@ -22,6 +22,7 @@ router.get('/:id', getOrderById)
 // Protected routes
 router.post('/', authenticate, createOrder)
 router.put('/:id', authenticate, updateOrder)
+router.put('/:id/status', authenticate, updateOrder) // Add status update route
 router.delete('/:id', authenticate, deleteOrder)
 
 export default router

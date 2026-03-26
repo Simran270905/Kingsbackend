@@ -1,7 +1,7 @@
-import Order from '../models/Order.js'
-import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
-import { validateOrder } from '../utils/validation.js'
-import shiprocketService from '../services/shiprocketService.js'
+import Order from '../../models/Order.js'
+import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import { validateOrder } from '../../utils/validation.js'
+import shiprocketService from '../../services/shiprocketService.js'
 
 // GET all orders (Admin only)
 export const getOrders = catchAsync(async (req, res) => {
@@ -187,8 +187,13 @@ export const createOrder = catchAsync(async (req, res) => {
   // Populate user data for response
   await order.populate('userId', 'name email mobile')
 
-  // Create shipment with Shiprocket
+  // Create shipment with Shiprocket (TEMPORARILY DISABLED)
   try {
+    console.log('🚀 Shiprocket integration temporarily disabled - fix credentials in .env')
+    console.log('📝 See SHIPROCKET_FIX_GUIDE.md for instructions')
+    
+    // TODO: Re-enable after fixing Shiprocket credentials
+    /*
     console.log('🚀 Creating shipment with Shiprocket for order:', order._id)
     const shipmentResult = await shiprocketService.createOrder(order)
 
@@ -204,8 +209,16 @@ export const createOrder = catchAsync(async (req, res) => {
       await order.save()
       console.log('❌ Shipment creation failed, marked as pending')
     }
+    */
+    
+    // Set status to pending (manual shipping)
+    order.shippingStatus = 'pending'
+    order.notes = order.notes + ' [Shiprocket integration disabled - manual shipping required]'
+    await order.save()
+    console.log('📦 Order created - manual shipping required')
+    
   } catch (error) {
-    console.error('❌ Shiprocket integration error:', error.message)
+    console.error('❌ Shiprocket setup error:', error.message)
     order.shippingStatus = 'failed'
     await order.save()
   }

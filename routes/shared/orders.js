@@ -4,14 +4,19 @@ import {
   getOrderById, 
   createOrder, 
   updateOrder, 
-  deleteOrder 
-} from '../controllers/shared/shared/orderController.js'
-import { authenticate } from '../middleware/auth.js'
+  deleteOrder,
+  getUserOrders
+} from '../../controllers/shared/orderController.js'
+import { authenticate, protectCustomer } from '../../middleware/auth.js'
 
 const router = express.Router()
 
 // Public routes
 router.get('/', getOrders)
+
+// Customer specific routes (must come before /:id)
+router.get('/my-orders', protectCustomer, getUserOrders)
+
 router.get('/:id', getOrderById)
 
 // Protected routes

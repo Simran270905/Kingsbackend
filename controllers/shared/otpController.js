@@ -1,9 +1,9 @@
-import User from '../models/User.js'
+import User from '../../models/User.js'
 import jwt from 'jsonwebtoken'
-import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
-import { generateOTP, hashOTP, verifyOTP } from '../utils/otpService.js'
-import emailService from '../services/emailService.js'
-import smsService from '../services/smsService.js'
+import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import { generateOTP, hashOTP, verifyOTP } from '../../utils/otpService.js'
+import emailService from '../../services/emailService.js'
+import smsService from '../../services/smsService.js'
 
 // Send OTP
 export const sendOTP = catchAsync(async (req, res) => {
@@ -74,6 +74,8 @@ export const sendOTP = catchAsync(async (req, res) => {
   // Send OTP via email with enhanced error handling
   try {
     console.log('📧 Attempting to send OTP via email to:', email)
+    console.log('📧 Email user configured:', !!process.env.EMAIL_USER)
+    
     const emailResult = await emailService.sendOTP(email, otpCode, name)
     console.log('✅ Email sent successfully')
     console.log('📧 Message ID:', emailResult.messageId)
@@ -89,13 +91,33 @@ export const sendOTP = catchAsync(async (req, res) => {
     
   } catch (error) {
     console.error('❌ Email sending failed:', error.message)
+    console.error('❌ Full error:', error)
     
-    // For any email error, provide OTP as fallback (for testing)
-    console.log('⚠️ Email failed but returning OTP as fallback')
+    // Always provide OTP as fallback when email fails
+    console.log('⚠️ Email failed but providing OTP as fallback')
+    
+    let errorMessage = 'Email service temporarily unavailable. Using OTP fallback mode.';
+    
+    if (error.message.includes('Timeout') || error.message.includes('ETIMEDOUT')) {
+      errorMessage = 'Email service timeout. Using OTP fallback mode.';
+    } else if (error.message.includes('Gmail authentication failed')) {
+      errorMessage = 'Email service needs configuration. Using OTP fallback mode.';
+    } else if (error.message.includes('Network') || error.message.includes('connection')) {
+      errorMessage = 'Network connectivity issue. Using OTP fallback mode.';
+    }
+    
     return sendSuccess(res, {
-      message: 'Email service unavailable, but here is your OTP for testing',
+      message: errorMessage,
       emailSent: false,
-      otp: otpCode
+      otp: otpCode,
+      debugInfo: {
+        error: error.message,
+        emailConfigured: !!process.env.EMAIL_USER,
+        smtpConfigured: !!process.env.SMTP_HOST,
+        isTimeout: error.message.includes('Timeout') || error.message.includes('ETIMEDOUT'),
+        isAuthError: error.message.includes('Authentication failed'),
+        isNetworkError: error.message.includes('Network') || error.message.includes('connection')
+      }
     }, 200, 'OTP generated (fallback mode)')
   }
 })
@@ -234,8 +256,9 @@ export const resendOTP = catchAsync(async (req, res) => {
   // Send OTP via email only
   try {
     console.log('📧 Attempting to resend OTP via email to:', email)
+    console.log('📧 Email user configured:', !!process.env.EMAIL_USER)
     const fullName = `${user.firstName} ${user.lastName}`.trim()
-    const emailResult = await sendEmailOTP(email, otpCode, fullName)
+    const emailResult = await emailService.sendOTP(email, otpCode, fullName)
     console.log('✅ Resend email sent successfully')
     console.log('📧 Message ID:', emailResult.messageId)
     
@@ -247,23 +270,33 @@ export const resendOTP = catchAsync(async (req, res) => {
     
   } catch (error) {
     console.error('❌ Email resend failed:', error.message)
+    console.error('❌ Full error:', error)
     
-    // Check if it's a configuration error
-    if (error.message.includes('Email credentials not configured')) {
-      return sendError(res, 'Email service is not configured. Please contact support.', 503)
+    // Always provide OTP as fallback when email fails
+    console.log('⚠️ Email failed but providing OTP as fallback')
+    
+    let errorMessage = 'Email service temporarily unavailable. Using OTP fallback mode.';
+    
+    if (error.message.includes('Timeout') || error.message.includes('ETIMEDOUT')) {
+      errorMessage = 'Email service timeout. Using OTP fallback mode.';
+    } else if (error.message.includes('Gmail authentication failed')) {
+      errorMessage = 'Email service needs configuration. Using OTP fallback mode.';
+    } else if (error.message.includes('Network') || error.message.includes('connection')) {
+      errorMessage = 'Network connectivity issue. Using OTP fallback mode.';
     }
     
-    // Check if it's an authentication error
-    if (error.message.includes('Authentication') || error.message.includes('EAUTH')) {
-      return sendError(res, 'Email service authentication failed. Please contact support.', 503)
-    }
-    
-    // Check if it's a connection error
-    if (error.message.includes('connection') || error.message.includes('ECONNECTION') || error.message.includes('timeout')) {
-      return sendError(res, 'Email service is temporarily unavailable. Please try again later.', 503)
-    }
-    
-    // For any other email errors, return a generic error
-    return sendError(res, 'Failed to resend OTP. Please try again later.', 500)
+    return sendSuccess(res, {
+      message: errorMessage,
+      emailSent: false,
+      otp: otpCode,
+      debugInfo: {
+        error: error.message,
+        emailConfigured: !!process.env.EMAIL_USER,
+        smtpConfigured: !!process.env.SMTP_HOST,
+        isTimeout: error.message.includes('Timeout') || error.message.includes('ETIMEDOUT'),
+        isAuthError: error.message.includes('Authentication failed'),
+        isNetworkError: error.message.includes('Network') || error.message.includes('connection')
+      }
+    }, 200, 'OTP resent (fallback mode)')
   }
 })

@@ -7,15 +7,15 @@ import {
   updateCoupon,
   deleteCoupon
 } from '../controllers/shared/couponController.js'
-import { authenticateAdmin } from '../middleware/authMiddleware.js'
+import { protectAdmin } from '../../middleware/auth.js'
 
 const router = express.Router()
 
-router.post('/', authenticateAdmin, createCoupon)
+router.post('/', protectAdmin, createCoupon)
 router.get('/', getAllCoupons)
 router.get('/:code', getCouponByCode)
 router.post('/validate', validateCoupon)
-router.put('/:id', authenticateAdmin, updateCoupon)
-router.delete('/:id', authenticateAdmin, deleteCoupon)
+router.put('/:id', protectAdmin, updateCoupon)
+router.delete('/:id', protectAdmin, deleteCoupon)
 
 export default router

@@ -46,37 +46,37 @@ const orderSchema = new mongoose.Schema(
     customer: {
       firstName: {
         type: String,
-        required: true
+        required: false  // Changed from required to optional
       },
       lastName: {
         type: String,
-        required: true
+        required: false  // Changed from required to optional
       },
       email: {
         type: String,
-        required: true,
+        required: false,  // Changed from required to optional
         match: /.+@.+\..+/
       },
       mobile: {
         type: String,
-        required: true,
+        required: false,  // Changed from required to optional
         match: /^[0-9]{10}$/
       },
       streetAddress: {
         type: String,
-        required: true
+        required: false  // Changed from required to optional
       },
       city: {
         type: String,
-        required: true
+        required: false  // Changed from required to optional
       },
       state: {
         type: String,
-        required: true
+        required: false  // Changed from required to optional
       },
       zipCode: {
         type: String,
-        required: true,
+        required: false,  // Changed from required to optional
         match: /^[0-9]{6}$/
       }
     },

@@ -1,6 +1,6 @@
 import cloudinary from 'cloudinary'
-import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
-import { protectAdmin } from '../middleware/auth.js'
+import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import { protectAdmin } from '../../middleware/authMiddleware.js'
 import multer from 'multer'
 
 // Configure multer for file uploads

@@ -3,14 +3,15 @@ import {
   getContent, 
   saveContent, 
   getAllContent 
-} from '../controllers/shared/shared/contentController.js'
-import { authenticate } from '../middleware/auth.js'
+} from '../../controllers/shared/contentController.js'
+import { authenticate } from '../../middleware/auth.js'
 
 const router = express.Router()
 
 // Public routes
 router.get('/type/:type', getContent)
 router.get('/', getAllContent)
+router.get('/footer', getContent) // Add specific footer endpoint
 
 // Protected routes
 router.post('/type/:type', authenticate, saveContent)

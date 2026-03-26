@@ -62,6 +62,15 @@ export const protectCustomer = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1]
+    
+    // Check for empty or invalid tokens
+    if (!token || token === 'undefined' || token === 'null' || token.length < 10) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authorization token'
+      })
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
     req.user = decoded
@@ -69,12 +78,24 @@ export const protectCustomer = (req, res, next) => {
   } catch (error) {
     console.log("❌ VERIFY ERROR:", error.message)
 
+    // Handle specific JWT errors
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authorization token'
+      })
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
+      })
+    }
+
     return res.status(401).json({
       success: false,
-      message:
-        error.name === 'TokenExpiredError'
-          ? 'Token expired'
-          : 'Invalid authorization token'
+        message: 'Invalid authorization token'
     })
   }
 }
@@ -92,6 +113,15 @@ export const authenticate = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1]
+    
+    // Check for empty or invalid tokens
+    if (!token || token === 'undefined' || token === 'null' || token.length < 10) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authorization token'
+      })
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
     req.user = decoded
@@ -99,12 +129,24 @@ export const authenticate = (req, res, next) => {
   } catch (error) {
     console.log("❌ VERIFY ERROR:", error.message)
 
+    // Handle specific JWT errors
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid authorization token'
+      })
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
+      })
+    }
+
     return res.status(401).json({
       success: false,
-      message:
-        error.name === 'TokenExpiredError'
-          ? 'Token expired'
-          : 'Invalid authorization token'
+      message: 'Invalid authorization token'
     })
   }
 }

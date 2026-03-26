@@ -1,9 +1,21 @@
-import Content from '../models/Content.js'
-import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
+import Content from '../../models/Content.js'
+import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 
 // GET content by type
 export const getContent = catchAsync(async (req, res) => {
   const { type } = req.params
+  
+  // Handle footer endpoint specifically
+  if (req.path === '/footer' || type === 'footer') {
+    const content = await Content.findOne({ type: 'footer' })
+    
+    if (!content) {
+      return sendSuccess(res, { type: 'footer', data: null })
+    }
+    
+    sendSuccess(res, { type: 'footer', data: content.data || null })
+    return
+  }
   
   const content = await Content.findOne({ type })
   

@@ -1,6 +1,6 @@
 import Product from '../../models/Product.js'
 import cloudinary from 'cloudinary'
-import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
+import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 import { validateProduct } from '../../utils/validation.js'
 
 const extractPublicId = (url) => {

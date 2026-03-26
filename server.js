@@ -37,30 +37,30 @@ if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
 }
 
 // Import config and middleware
-import './src/config/cloudinary.js'
-import { createRateLimiter } from './src/middleware/authMiddleware.js'
+import './config/cloudinary.js'
+import { createRateLimiter } from './middleware/authMiddleware.js'
 
 // Import routes
-import productRoutes from './src/routes/productRoutes.js'
-import orderRoutes from './src/routes/orderRoutes.js'
-import authRoutes from './src/routes/authRoutes.js'
-import otpRoutes from './src/routes/otpRoutes.js'
-import uploadRoutes from './src/routes/uploadRoutes.js'
-import analyticsRoutes from './src/routes/analyticsRoutes.js'
-import contentRoutes from './src/routes/contentRoutes.js'
-import adminRoutes from './src/routes/adminRoutes.js'
-import userRoutes from './src/routes/userRoutes.js'
-import cartRoutes from './src/routes/cartRoutes.js'
-import paymentRoutes from './src/routes/paymentRoutes.js'
-import wishlistRoutes from './src/routes/wishlistRoutes.js'
-import couponRoutes from './src/routes/couponRoutes.js'
-import reviewRoutes from './src/routes/reviewRoutes.js'
-import brandRoutes from './src/routes/brandRoutes.js'
-import categoryRoutes from './src/routes/categoryRoutes.js'
-import enhancedOrderRoutes from './src/routes/enhancedOrderRoutes.js'
+import productRoutes from './routes/productRoutes.js'
+import orderRoutes from './routes/orderRoutes.js'
+import authRoutes from './routes/authRoutes.js'
+import otpRoutes from './routes/otpRoutes.js'
+import uploadRoutes from './routes/uploadRoutes.js'
+import analyticsRoutes from './routes/analyticsRoutes.js'
+import contentRoutes from './routes/contentRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+import cartRoutes from './routes/cartRoutes.js'
+import paymentRoutes from './routes/paymentRoutes.js'
+import wishlistRoutes from './routes/wishlistRoutes.js'
+import couponRoutes from './routes/couponRoutes.js'
+import reviewRoutes from './routes/reviewRoutes.js'
+import brandRoutes from './routes/brandRoutes.js'
+import categoryRoutes from './routes/categoryRoutes.js'
+import enhancedOrderRoutes from './routes/enhancedOrderRoutes.js'
 
 // Import quick fix controller
-import { fixDeliveredCODOrders, getCurrentStatus } from './src/controllers/quickFixController.js'
+import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/quickFixController.js'
 
 // Initialize app
 const app = express()

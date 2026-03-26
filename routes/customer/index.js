@@ -7,7 +7,9 @@ import {
   addAddress,
   deleteAddress,
   getOrderHistory,
-  simpleLogin
+  simpleLogin,
+  login,
+  register
 } from '../../controllers/customer/userController.js'
 import {
   sendOTP,
@@ -24,6 +26,8 @@ router.post('/send-otp', loginRateLimiter, sendOTP)
 router.post('/verify-otp', loginRateLimiter, verifyOTPController)
 router.post('/resend-otp', loginRateLimiter, resendOTP)
 router.post('/register-or-login', loginRateLimiter, simpleLogin)
+router.post('/login', loginRateLimiter, login)
+router.post('/register', loginRateLimiter, register)
 
 // Protected routes (require authentication)
 router.get('/profile', protectCustomer, getProfile)

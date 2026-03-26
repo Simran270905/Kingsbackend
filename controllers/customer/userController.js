@@ -211,3 +211,85 @@ export const getAllCustomers = catchAsync(async (req, res) => {
     .sort({ createdAt: -1 })
   sendSuccess(res, customers)
 })
+
+// Traditional login (email/password) - for backward compatibility
+export const login = catchAsync(async (req, res) => {
+  const { email, password } = req.body
+
+  if (!email || !password) {
+    return sendError(res, 'Email and password are required', 400)
+  }
+
+  const user = await User.findOne({ email }).select('+password')
+  
+  if (!user || !user.password) {
+    return sendError(res, 'Invalid credentials', 401)
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password)
+  
+  if (!isMatch) {
+    return sendError(res, 'Invalid credentials', 401)
+  }
+
+  const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  )
+
+  const userData = {
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phone: user.phone,
+    addresses: user.addresses || []
+  }
+
+  sendSuccess(res, { user: userData, token }, 200, 'Login successful')
+})
+
+// Traditional register (email/password) - for backward compatibility
+export const register = catchAsync(async (req, res) => {
+  const { firstName, lastName, email, phone, password } = req.body
+
+  if (!firstName || !email || !password) {
+    return sendError(res, 'First name, email, and password are required', 400)
+  }
+
+  const existingUser = await User.findOne({ email })
+  
+  if (existingUser) {
+    return sendError(res, 'User already exists', 400)
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10)
+
+  const user = new User({
+    firstName,
+    lastName,
+    email,
+    phone,
+    password: hashedPassword
+  })
+
+  await user.save()
+
+  const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  )
+
+  const userData = {
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phone: user.phone,
+    addresses: user.addresses || []
+  }
+
+  sendSuccess(res, { user: userData, token }, 201, 'Registration successful')
+})

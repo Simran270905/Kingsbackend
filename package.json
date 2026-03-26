@@ -5,7 +5,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server-minimal.js",
     "dev": "nodemon server-new.js",
     "legacy": "node server.js",
     "new": "node server-new.js",

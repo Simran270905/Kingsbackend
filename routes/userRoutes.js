@@ -8,12 +8,20 @@ import {
   deleteAddress,
   getOrderHistory
 } from '../controllers/userController.js'
+import {
+  sendOTP,
+  verifyOTPController,
+  resendOTP
+} from '../controllers/otpController.js'
 import { protectCustomer } from '../middleware/customerAuth.js'
+import { loginRateLimiter } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-// Note: Authentication is handled via OTP routes at /api/otp
-// These routes are for authenticated users only
+// Public routes
+router.post('/send-otp', loginRateLimiter, sendOTP)
+router.post('/verify-otp', loginRateLimiter, verifyOTPController)
+router.post('/resend-otp', loginRateLimiter, resendOTP)
 
 // Protected routes (require authentication)
 router.get('/profile', protectCustomer, getProfile)

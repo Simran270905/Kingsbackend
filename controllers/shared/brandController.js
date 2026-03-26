@@ -1,6 +1,6 @@
-import Brand from '../../models/Brand.js'
+import Brand from '../models/Brand.js'
 import cloudinary from 'cloudinary'
-import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
 // GET all brands
 export const getBrands = catchAsync(async (req, res) => {

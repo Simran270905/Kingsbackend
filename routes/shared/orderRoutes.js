@@ -8,15 +8,15 @@ import {
   updateOrder,
   deleteOrder,
   getOrderStats
-} from '../../controllers/shared/orderController.js'
+} from '../controllers/shared/orderController.js'
 import {
   markCODOrderAsPaid,
   getCODOrdersPendingPayment,
   getCODPaymentStats,
   markMultipleCODAsPaid
-} from '../../controllers/shared/codController.js'
-import { protectAdmin } from '../../middleware/authMiddleware.js'
-import { protectCustomer } from '../../middleware/customerAuth.js'
+} from '../controllers/shared/codController.js'
+import { protectAdmin } from '../middleware/authMiddleware.js'
+import { protectCustomer } from '../middleware/customerAuth.js'
 
 const router = express.Router()
 

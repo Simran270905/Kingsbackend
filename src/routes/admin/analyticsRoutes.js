@@ -3,8 +3,8 @@ import {
   getAnalytics,
   getProductAnalytics,
   getCustomerAnalytics
-} from '../../controllers/analyticsController.js'
-import { protectAdmin } from '../../middleware/authMiddleware.js'
+} from '../controllers/analyticsController.js'
+import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 

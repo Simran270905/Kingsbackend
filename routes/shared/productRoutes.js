@@ -12,7 +12,7 @@ import {
   getBestSellers,
   getOnSaleProducts
 } from '../../controllers/shared/productController.js'
-import { protectAdmin } from '../../middleware/authMiddleware.js'
+import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 

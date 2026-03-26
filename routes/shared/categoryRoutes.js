@@ -6,8 +6,8 @@ import {
   createCategory,
   updateCategory,
   deleteCategory
-} from '../../controllers/shared/categoryController.js'
-import { protectAdmin } from '../../middleware/authMiddleware.js'
+} from '../controllers/shared/categoryController.js'
+import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 

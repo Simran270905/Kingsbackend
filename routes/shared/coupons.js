@@ -5,8 +5,8 @@ import {
   createCoupon, 
   updateCoupon, 
   deleteCoupon 
-} from '../../controllers/shared/shared/couponController.js'
-import { authenticate } from '../../middleware/auth.js'
+} from '../controllers/shared/shared/couponController.js'
+import { authenticate } from '../middleware/auth.js'
 
 const router = express.Router()
 

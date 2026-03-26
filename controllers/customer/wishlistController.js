@@ -1,6 +1,6 @@
-import Wishlist from '../../models/Wishlist.js'
-import Product from '../../models/Product.js'
-import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import Wishlist from '../models/Wishlist.js'
+import Product from '../models/Product.js'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
 // GET user's wishlist
 export const getWishlist = catchAsync(async (req, res) => {

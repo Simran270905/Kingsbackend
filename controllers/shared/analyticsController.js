@@ -1,6 +1,6 @@
-import Order from '../../models/Order.js'
-import Product from '../../models/Product.js'
-import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import Order from '../models/Order.js'
+import Product from '../models/Product.js'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
 // GET analytics data
 export const getAnalytics = catchAsync(async (req, res) => {

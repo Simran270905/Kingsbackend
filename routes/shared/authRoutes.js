@@ -1,8 +1,8 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import bcryptjs from 'bcryptjs'
-import { loginRateLimiter } from '../../middleware/authMiddleware.js'
-import { validateAdminLogin } from '../../middleware/validateRequest.js'
+import { loginRateLimiter } from '../middleware/authMiddleware.js'
+import { validateAdminLogin } from '../middleware/validateRequest.js'
 
 const router = express.Router()
 

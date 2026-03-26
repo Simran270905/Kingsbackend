@@ -1,10 +1,10 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
-import { loginAdmin, verifyAdmin, logoutAdmin } from '../../controllers/admin/adminController.js'
-import { getAllCustomers } from '../../controllers/customer/userController.js'
-import { protectAdmin } from '../../middleware/auth.js'
-import { getAdminAnalytics, validateRevenue } from '../../controllers/admin/adminAnalyticsController.js'
-import { sendSuccess, sendError } from '../../middleware/errorHandler.js'
+import { loginAdmin, verifyAdmin, logoutAdmin } from '../controllers/admin/adminController.js'
+import { getAllCustomers } from '../controllers/customer/userController.js'
+import { protectAdmin } from '../middleware/auth.js'
+import { getAdminAnalytics, validateRevenue } from '../controllers/admin/adminAnalyticsController.js'
+import { sendSuccess, sendError } from '../middleware/errorHandler.js'
 
 const router = express.Router()
 

@@ -1,6 +1,6 @@
-import Cart from '../../models/Cart.js'
-import Product from '../../models/Product.js'
-import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import Cart from '../models/Cart.js'
+import Product from '../models/Product.js'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
 // Get cart
 export const getCart = catchAsync(async (req, res) => {

@@ -5,8 +5,8 @@ import {
   getPaymentStatus,
   handlePaymentWebhook,
   getPaymentHistory
-} from '../../controllers/paymentController.js'
-import { protectCustomer } from '../../middleware/customerAuth.js'
+} from '../controllers/paymentController.js'
+import { protectCustomer } from '../middleware/customerAuth.js'
 
 const router = express.Router()
 

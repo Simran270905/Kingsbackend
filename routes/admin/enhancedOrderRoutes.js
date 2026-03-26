@@ -4,8 +4,8 @@ import {
   getOrderDetailsEnhanced,
   markCODOrderAsPaidEnhanced,
   exportPaymentReports
-} from '../../controllers/admin/enhancedOrderController.js'
-import { protectAdmin } from '../../middleware/authMiddleware.js'
+} from '../controllers/admin/enhancedOrderController.js'
+import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 

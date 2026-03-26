@@ -3,8 +3,8 @@ import {
   getContent, 
   saveContent, 
   getAllContent 
-} from '../../controllers/shared/contentController.js'
-import { authenticate } from '../../middleware/auth.js'
+} from '../controllers/shared/contentController.js'
+import { authenticate } from '../middleware/auth.js'
 
 const router = express.Router()
 

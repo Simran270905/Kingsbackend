@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import bcryptjs from 'bcryptjs'
-import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
+import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
 
 // ======================
 // 🔐 LOGIN ADMIN

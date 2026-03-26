@@ -1,8 +1,8 @@
 import express from 'express'
 import multer from 'multer'
 import cloudinary from 'cloudinary'
-import { sendSuccess, sendError } from '../../utils/errorHandler.js'
-import { protectAdmin } from '../../middleware/authMiddleware.js'
+import { sendSuccess, sendError } from '../utils/errorHandler.js'
+import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 

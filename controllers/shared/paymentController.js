@@ -1,10 +1,10 @@
 import Razorpay from 'razorpay'
 import crypto from 'crypto'
-import Payment from '../../models/Payment.js'
-import Order from '../../models/Order.js'
-import Cart from '../../models/Cart.js'
-import shiprocketService from '../../services/shiprocketService.js'
-import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
+import Payment from '../models/Payment.js'
+import Order from '../models/Order.js'
+import Cart from '../models/Cart.js'
+import shiprocketService from '../services/shiprocketService.js'
+import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
 
 // Initialize Razorpay instance with lazy loading
 let razorpay = null

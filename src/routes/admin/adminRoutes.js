@@ -1,9 +1,9 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
-import { loginAdmin, verifyAdmin, logoutAdmin } from '../../controllers/adminController.js'
-import { getAllCustomers } from '../../controllers/userController.js'
-import { protectAdmin, loginRateLimiter } from '../../middleware/authMiddleware.js'
-import { getAdminAnalytics, validateRevenue } from '../../controllers/adminAnalyticsController.js'
+import { loginAdmin, verifyAdmin, logoutAdmin } from '../controllers/adminController.js'
+import { getAllCustomers } from '../controllers/userController.js'
+import { protectAdmin, loginRateLimiter } from '../middleware/authMiddleware.js'
+import { getAdminAnalytics, validateRevenue } from '../controllers/adminAnalyticsController.js'
 
 const router = express.Router()
 

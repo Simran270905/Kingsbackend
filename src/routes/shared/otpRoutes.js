@@ -1,7 +1,7 @@
 import express from 'express'
-import { sendOTP, verifyOTPController, resendOTP, resetOTPAttempts } from '../../controllers/otpController.js'
-import { loginRateLimiter } from '../../middleware/authMiddleware.js'
-import { sendEmailOTP } from '../../utils/otpService.js'
+import { sendOTP, verifyOTPController, resendOTP, resetOTPAttempts } from '../controllers/otpController.js'
+import { loginRateLimiter } from '../middleware/authMiddleware.js'
+import { sendEmailOTP } from '../utils/otpService.js'
 
 const router = express.Router()
 

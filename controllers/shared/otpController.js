@@ -1,9 +1,9 @@
-import User from '../../models/User.js'
+import User from '../models/User.js'
 import jwt from 'jsonwebtoken'
-import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
-import { generateOTP, hashOTP, verifyOTP } from '../../utils/otpService.js'
-import emailService from '../../services/emailService.js'
-import smsService from '../../services/smsService.js'
+import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
+import { generateOTP, hashOTP, verifyOTP } from '../utils/otpService.js'
+import emailService from '../services/emailService.js'
+import smsService from '../services/smsService.js'
 
 // Send OTP
 export const sendOTP = catchAsync(async (req, res) => {

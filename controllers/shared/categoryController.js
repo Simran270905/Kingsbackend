@@ -1,6 +1,6 @@
-import Category from '../../models/Category.js'
+import Category from '../models/Category.js'
 import cloudinary from 'cloudinary'
-import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
 // GET all active categories (public)
 export const getCategories = catchAsync(async (req, res) => {

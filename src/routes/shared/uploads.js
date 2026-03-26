@@ -1,6 +1,6 @@
 import express from 'express'
-import { uploadImage, uploadImages, deleteImage, upload } from '../../controllers/shared/uploadController.js'
-import { protectAdmin } from '../../middleware/auth.js'
+import { uploadImage, uploadImages, deleteImage, upload } from '../controllers/shared/uploadController.js'
+import { protectAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 

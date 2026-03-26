@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { sendError } from '../../utils/errorHandler.js'
+import { sendError } from '../utils/errorHandler.js'
 
 // Protect customer routes
 export const protectCustomer = (req, res, next) => {

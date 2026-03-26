@@ -5,8 +5,8 @@ import {
   createCategory, 
   updateCategory, 
   deleteCategory 
-} from '../../controllers/shared/shared/categoryController.js'
-import { authenticate } from '../../middleware/auth.js'
+} from '../controllers/shared/shared/categoryController.js'
+import { authenticate } from '../middleware/auth.js'
 
 const router = express.Router()
 

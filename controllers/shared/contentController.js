@@ -1,5 +1,5 @@
-import Content from '../../models/Content.js'
-import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import Content from '../models/Content.js'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
 // GET content by type
 export const getContent = catchAsync(async (req, res) => {

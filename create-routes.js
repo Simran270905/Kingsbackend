@@ -52,10 +52,10 @@ function createRouteFile(filename, config) {
   if (filename === 'uploads.js') {
     content += `import { uploadImage, uploadImages, deleteImage } from '${config.controller}'\n`
   } else {
-    content += `import { ${config.methods.join(', ')} } from '../../controllers/shared/${config.controller}'\n`
+    content += `import { ${config.methods.join(', ')} } from '../controllers/shared/${config.controller}'\n`
   }
   
-  content += `import { authenticate } from '../../middleware/auth.js'\n\n`
+  content += `import { authenticate } from '../middleware/auth.js'\n\n`
   content += `const router = express.Router()\n\n`
   
   // Add routes based on methods

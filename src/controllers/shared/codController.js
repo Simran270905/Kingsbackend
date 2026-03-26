@@ -1,5 +1,5 @@
-import Order from '../../models/Order.js'
-import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
+import Order from '../models/Order.js'
+import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
 
 /**
  * Update COD order payment status when cash is collected

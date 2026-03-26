@@ -2,8 +2,8 @@ import express from 'express'
 import {
   getAdminAnalytics,
   validateRevenue
-} from '../../controllers/admin/adminAnalyticsController.js'
-import { protectAdmin } from '../../middleware/authMiddleware.js'
+} from '../controllers/admin/adminAnalyticsController.js'
+import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 

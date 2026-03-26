@@ -7,14 +7,14 @@ import {
   addAddress,
   deleteAddress,
   getOrderHistory
-} from '../../controllers/admin/customer/userController.js'
+} from '../controllers/admin/customer/userController.js'
 import {
   sendOTP,
   verifyOTPController,
   resendOTP
-} from '../../controllers/admin/shared/otpController.js'
-import { protectCustomer } from '../../middleware/auth.js'
-import { loginRateLimiter } from '../../middleware/auth.js'
+} from '../controllers/admin/shared/otpController.js'
+import { protectCustomer } from '../middleware/auth.js'
+import { loginRateLimiter } from '../middleware/auth.js'
 
 const router = express.Router()
 

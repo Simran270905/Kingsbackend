@@ -5,7 +5,7 @@ services:
     env: node
     plan: free
     buildCommand: "npm install"
-    startCommand: "node server-minimal.js"
+    startCommand: "node server-fixed.js"
     envVars:
       - key: NODE_ENV
         value: production

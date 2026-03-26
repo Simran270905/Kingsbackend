@@ -5,7 +5,7 @@ import {
   createProduct, 
   updateProduct, 
   deleteProduct 
-} from '../../controllers/shared/productController.js'
+} from '../../controllers/shared/shared/productController.js'
 import { authenticate } from '../../middleware/auth.js'
 
 const router = express.Router()

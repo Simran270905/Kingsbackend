@@ -8,13 +8,13 @@ import {
   updateOrder,
   deleteOrder,
   getOrderStats
-} from '../../controllers/orderController.js'
+} from '../../controllers/shared/orderController.js'
 import {
   markCODOrderAsPaid,
   getCODOrdersPendingPayment,
   getCODPaymentStats,
   markMultipleCODAsPaid
-} from '../../controllers/codController.js'
+} from '../../controllers/shared/codController.js'
 import { protectAdmin } from '../../middleware/authMiddleware.js'
 import { protectCustomer } from '../../middleware/customerAuth.js'
 

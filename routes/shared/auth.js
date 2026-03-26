@@ -1,5 +1,5 @@
 import express from 'express'
-import { sendOTP, verifyOTPController, resendOTP } from '../../controllers/shared/otpController.js'
+import { sendOTP, verifyOTPController, resendOTP } from '../../controllers/shared/shared/otpController.js'
 import { authenticate } from '../../middleware/auth.js'
 
 const router = express.Router()

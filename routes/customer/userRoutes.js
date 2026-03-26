@@ -7,12 +7,12 @@ import {
   addAddress,
   deleteAddress,
   getOrderHistory
-} from '../../controllers/userController.js'
+} from '../../controllers/customer/userController.js'
 import {
   sendOTP,
   verifyOTPController,
   resendOTP
-} from '../../controllers/otpController.js'
+} from '../../controllers/shared/otpController.js'
 import { protectCustomer } from '../../middleware/customerAuth.js'
 import { loginRateLimiter } from '../../middleware/authMiddleware.js'
 

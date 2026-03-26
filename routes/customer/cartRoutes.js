@@ -5,7 +5,7 @@ import {
   updateCartItem,
   removeFromCart,
   clearCart
-} from '../../controllers/cartController.js'
+} from '../../controllers/admin/cartController.js'
 import { protectCustomer } from '../../middleware/customerAuth.js'
 
 const router = express.Router()

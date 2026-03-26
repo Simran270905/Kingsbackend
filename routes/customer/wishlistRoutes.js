@@ -4,7 +4,7 @@ import {
   addToWishlist,
   removeFromWishlist,
   clearWishlist,
-} from '../../controllers/admin/wishlistController.js'
+} from '../../controllers/customer/wishlistController.js'
 import { protectCustomer } from '../../middleware/customerAuth.js'
 
 const router = express.Router()

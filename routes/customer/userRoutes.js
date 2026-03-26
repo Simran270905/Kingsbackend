@@ -6,7 +6,8 @@ import {
   getAddresses,
   addAddress,
   deleteAddress,
-  getOrderHistory
+  getOrderHistory,
+  simpleLogin
 } from '../controllers/customer/userController.js'
 import {
   sendOTP,
@@ -22,6 +23,7 @@ const router = express.Router()
 router.post('/send-otp', loginRateLimiter, sendOTP)
 router.post('/verify-otp', loginRateLimiter, verifyOTPController)
 router.post('/resend-otp', loginRateLimiter, resendOTP)
+router.post('/register-or-login', loginRateLimiter, simpleLogin)
 
 // Protected routes (require authentication)
 router.get('/profile', protectCustomer, getProfile)

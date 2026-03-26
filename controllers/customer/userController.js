@@ -4,6 +4,69 @@ import Order from '../../models/Order.js'
 import jwt from 'jsonwebtoken'
 import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 
+// Simple login with name, email, and phone only
+export const simpleLogin = catchAsync(async (req, res) => {
+  const { name, email, phone } = req.body
+
+  // Validation
+  if (!name || !email || !phone) {
+    return sendError(res, 'Name, email, and phone are required', 400)
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    return sendError(res, 'Please enter a valid email address', 400)
+  }
+
+  if (!/^[0-9]{10}$/.test(phone)) {
+    return sendError(res, 'Please enter a valid 10-digit phone number', 400)
+  }
+
+  // Check if user exists by email or phone
+  let user = await User.findOne({ 
+    $or: [{ email }, { phone }] 
+  })
+
+  if (user) {
+    // Existing user - update name if different
+    if (user.firstName !== name.split(' ')[0] || user.lastName !== name.split(' ').slice(1).join(' ')) {
+      const nameParts = name.split(' ')
+      user.firstName = nameParts[0]
+      user.lastName = nameParts.slice(1).join(' ')
+      await user.save()
+    }
+  } else {
+    // New user - create account
+    const nameParts = name.split(' ')
+    user = new User({
+      firstName: nameParts[0],
+      lastName: nameParts.slice(1).join(' '),
+      email,
+      phone
+    })
+    await user.save()
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  )
+
+  // Return user data and token
+  const userData = {
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phone: user.phone,
+    addresses: user.addresses || []
+  }
+
+  sendSuccess(res, { user: userData, token }, 200, 'Login successful')
+})
+
 // Change customer password
 export const changePassword = catchAsync(async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body

@@ -11,6 +11,7 @@ import directAuthRoutes from './directAuthRoutes.js'
 import reviewRoutes from './reviews.js'
 import couponRoutes from './coupons.js'
 import contentRoutes from './content.js'
+import healthRoutes from './health.js'
 
 const router = express.Router()
 
@@ -27,5 +28,6 @@ router.use('/auth', directAuthRoutes) // Direct login without OTP
 router.use('/reviews', reviewRoutes)
 router.use('/coupons', couponRoutes)
 router.use('/content', contentRoutes)
+router.use('/health', healthRoutes) // Health check endpoints
 
 export default router

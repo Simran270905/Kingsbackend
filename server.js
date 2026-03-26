@@ -13,12 +13,24 @@ dns.setServers(['8.8.8.8', '1.1.1.1'])
 // Load environment variables
 dotenv.config()
 
+// Debug: Show loaded environment variables (in development only)
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔍 Environment Variables Debug:')
+  console.log('NODE_ENV:', process.env.NODE_ENV)
+  console.log('PORT:', process.env.PORT)
+  console.log('MONGO_URI:', process.env.MONGO_URI ? '✅ Set' : '❌ Missing')
+  console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ Set' : '❌ Missing')
+  console.log('ADMIN_PASSWORD:', process.env.ADMIN_PASSWORD ? '✅ Set' : '❌ Missing')
+  console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Missing')
+}
+
 // Validate required environment variables
 const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']
 const missingVars = requiredEnvVars.filter(env => !process.env[env])
 
 if (missingVars.length > 0) {
   console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`)
+  console.error('💡 Please check your .env file and ensure all required variables are set.')
   process.exit(1)
 }
 
@@ -76,6 +88,14 @@ app.use(cors({
 }));
 
 app.options('*', cors());
+
+// Cache control headers to prevent browser caching issues
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
+  next()
+})
 
 app.use(compression())
 

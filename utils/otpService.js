@@ -18,15 +18,46 @@ export const verifyOTP = async (inputOTP, hashedOTP) => {
   return inputHash === hashedOTP
 }
 
-// Email transporter configuration
+// Email transporter configuration with multiple options
 const createEmailTransporter = () => {
+  // Check for required email credentials
+  const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+  const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+  
+  if (!emailUser || !emailPass) {
+    throw new Error('Email credentials not configured. Please set EMAIL_USER and EMAIL_PASS environment variables.');
+  }
+  
+  // Try SendGrid first (more reliable on Render)
+  if (process.env.SENDGRID_API_KEY) {
+    console.log('📧 Using SendGrid for email service')
+    return nodemailer.createTransport({
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 10000,
+      tls: {
+        rejectUnauthorized: false
+      }
+    })
+  }
+  
+  // Fallback to Gmail
+  console.log('📧 Using Gmail for email service')
+  console.log('📧 Email user:', emailUser)
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: process.env.SMTP_PORT || 587,
     secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
+      user: emailUser,
+      pass: emailPass
     },
     // Add timeout and connection settings
     connectionTimeout: 10000, // 10 seconds
@@ -42,15 +73,19 @@ const createEmailTransporter = () => {
 export const sendEmailOTP = async (email, otp, name) => {
   try {
     console.log('📧 Attempting to send email to:', email)
+    console.log('📧 OTP to send:', otp)
     
     const transporter = createEmailTransporter()
     
     // Verify transporter connection first
+    console.log('📧 Verifying email transporter connection...')
     await transporter.verify()
     console.log('✅ Email transporter verified')
     
+    const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+    
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: emailUser,
       to: email,
       subject: 'KKings Jewellery - OTP Verification',
       html: `
@@ -74,16 +109,29 @@ export const sendEmailOTP = async (email, otp, name) => {
       `
     }
     
+    console.log('📧 Sending email with options:', { from: emailUser, to: email, subject: mailOptions.subject })
+    
     const result = await transporter.sendMail(mailOptions)
-    console.log('✅ Email sent successfully:', result.messageId)
-    return true
+    console.log('✅ Email sent successfully!')
+    console.log('📧 Message ID:', result.messageId)
+    console.log('📧 Response:', result.response)
+    return { success: true, messageId: result.messageId, response: result.response }
   } catch (error) {
-    console.error('❌ Email sending failed:', error.message)
-    console.error('❌ Email error details:', {
-      code: error.code,
-      command: error.command,
-      response: error.response
-    })
+    console.error('❌ Email sending failed:')
+    console.error('❌ Error code:', error.code)
+    console.error('❌ Error message:', error.message)
+    console.error('❌ Error command:', error.command)
+    console.error('❌ Error response:', error.response)
+    
+    // Log detailed error information for debugging
+    if (error.code === 'EAUTH') {
+      console.error('🔧 Authentication Error - Check EMAIL_USER and EMAIL_PASS')
+    } else if (error.code === 'ECONNECTION') {
+      console.error('🔧 Connection Error - Check SMTP_HOST and SMTP_PORT')
+    } else if (error.code === 'ETIMEDOUT') {
+      console.error('🔧 Timeout Error - Check network connectivity')
+    }
+    
     throw new Error(`Email service failed: ${error.message}`)
   }
 }

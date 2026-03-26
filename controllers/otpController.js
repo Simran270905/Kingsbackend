@@ -72,38 +72,38 @@ export const sendOTP = catchAsync(async (req, res) => {
   // Send OTP via email with enhanced error handling
   try {
     console.log('📧 Attempting to send OTP via email to:', email)
-    await sendEmailOTP(email, otpCode, name)
+    const emailResult = await sendEmailOTP(email, otpCode, name)
     console.log('✅ Email sent successfully')
+    console.log('📧 Message ID:', emailResult.messageId)
+    
+    // Only return success if email was actually sent
+    sendSuccess(res, { 
+      message: 'OTP sent successfully to your email',
+      emailSent: true,
+      messageId: emailResult.messageId
+    }, 200, 'OTP sent successfully')
+    
   } catch (error) {
     console.error('❌ Email sending failed:', error.message)
     
-    // Check if it's a timeout or connection issue
-    if (error.message.includes('timeout') || error.message.includes('connection') || error.message.includes('ECONN')) {
-      console.log('🔧 Email service timeout/connection issue - returning OTP in response')
-      sendSuccess(res, { 
-        otp: otpCode, 
-        message: 'OTP generated successfully (email service temporarily unavailable)',
-        emailSent: false 
-      }, 200, 'OTP sent successfully')
-      return
+    // Check if it's a configuration error
+    if (error.message.includes('Email credentials not configured')) {
+      return sendError(res, 'Email service is not configured. Please contact support.', 503)
     }
     
-    // For other email errors, still return OTP but log the issue
-    console.log('🔧 Email service error - returning OTP in response. Error:', error.message)
-    sendSuccess(res, { 
-      otp: otpCode, 
-      message: 'OTP generated successfully',
-      emailSent: false,
-      emailError: error.message
-    }, 200, 'OTP sent successfully')
-    return
+    // Check if it's an authentication error
+    if (error.message.includes('Authentication') || error.message.includes('EAUTH')) {
+      return sendError(res, 'Email service authentication failed. Please contact support.', 503)
+    }
+    
+    // Check if it's a connection error
+    if (error.message.includes('connection') || error.message.includes('ECONNECTION') || error.message.includes('timeout')) {
+      return sendError(res, 'Email service is temporarily unavailable. Please try again later.', 503)
+    }
+    
+    // For any other email errors, return a generic error
+    return sendError(res, 'Failed to send OTP. Please try again later.', 500)
   }
-
-  // If email was sent successfully
-  sendSuccess(res, { 
-    message: 'OTP sent successfully',
-    emailSent: true
-  }, 200, 'OTP sent successfully')
 })
 
 // Verify OTP
@@ -239,11 +239,37 @@ export const resendOTP = catchAsync(async (req, res) => {
 
   // Send OTP via email only
   try {
+    console.log('📧 Attempting to resend OTP via email to:', email)
     const fullName = `${user.firstName} ${user.lastName}`.trim()
-    await sendEmailOTP(email, otpCode, fullName)
+    const emailResult = await sendEmailOTP(email, otpCode, fullName)
+    console.log('✅ Resend email sent successfully')
+    console.log('📧 Message ID:', emailResult.messageId)
+    
+    sendSuccess(res, {
+      message: 'OTP resent successfully to your email',
+      emailSent: true,
+      messageId: emailResult.messageId
+    }, 200, 'OTP resent successfully')
+    
   } catch (error) {
-    return sendError(res, 'Failed to send OTP. Please try again.', 500)
+    console.error('❌ Email resend failed:', error.message)
+    
+    // Check if it's a configuration error
+    if (error.message.includes('Email credentials not configured')) {
+      return sendError(res, 'Email service is not configured. Please contact support.', 503)
+    }
+    
+    // Check if it's an authentication error
+    if (error.message.includes('Authentication') || error.message.includes('EAUTH')) {
+      return sendError(res, 'Email service authentication failed. Please contact support.', 503)
+    }
+    
+    // Check if it's a connection error
+    if (error.message.includes('connection') || error.message.includes('ECONNECTION') || error.message.includes('timeout')) {
+      return sendError(res, 'Email service is temporarily unavailable. Please try again later.', 503)
+    }
+    
+    // For any other email errors, return a generic error
+    return sendError(res, 'Failed to resend OTP. Please try again later.', 500)
   }
-
-  sendSuccess(res, null, 200, 'OTP resent successfully')
 })

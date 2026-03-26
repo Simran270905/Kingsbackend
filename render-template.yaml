@@ -1,0 +1,52 @@
+services:
+  # Backend API Service
+  - type: web
+    name: kkings-backend
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # Required: Add these in Render dashboard
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Optional: Add these in Render dashboard if needed
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: SHIPROCKET_EMAIL
+        sync: false
+      - key: SHIPROCKET_PASSWORD
+        sync: false
+      - key: SHIPROCKET_CHANNEL_ID
+        sync: false
+      # Frontend URLs
+      - key: FRONTEND_URL
+        value: https://your-frontend-domain.vercel.app
+      - key: CLIENT_URL
+        value: https://your-frontend-domain.vercel.app
+      - key: DEVELOPMENT_URL
+        value: http://localhost:5173
+      # Optional: Admin credentials
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    healthCheckPath: /api/health

@@ -36,16 +36,6 @@ if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
   console.log('✅ Razorpay credentials loaded successfully')
 }
 
-// Import config and middleware
-import './config/cloudinary.js'
-import { createRateLimiter } from './middleware/authMiddleware.js'
-
-// Import routes (using the proper structure)
-import routes from './routes/index.js'
-
-// Import quick fix controller
-import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/shared/quickFixController.js'
-
 // Initialize app
 const app = express()
 
@@ -93,22 +83,9 @@ app.use(cors({
 }))
 
 app.use(compression())
-
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ limit: '10mb', extended: true }))
-
-// Sanitize NoSQL injection attacks
 app.use(mongoSanitize())
-
-// Apply rate limiting
-app.use(createRateLimiter())
-
-// Mount routes
-app.use('/api', routes)
-
-// Quick fix routes (temporary)
-app.get('/api/fix/status', getCurrentStatus)
-app.get('/api/fix/delivered-cod', fixDeliveredCODOrders)
 
 // Health check
 app.get('/', (req, res) => {
@@ -279,6 +256,8 @@ const PORT = process.env.PORT || 5000
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`)
   console.log(`📝 API Documentation: http://localhost:${PORT}/api`)
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`🌍 CORS Origins: ${allowedOrigins.join(', ')}`)
 })
 
 // Handle unhandled promise rejections

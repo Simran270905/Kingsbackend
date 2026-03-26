@@ -11,6 +11,10 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: FRONTEND_URL
+        value: https://www.kkingsjewellery.com
+      - key: API_URL
+        value: https://api.kkingsjewellery.com
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET

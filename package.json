@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "nodemon server-new.js",
+    "legacy": "node server.js",
+    "new": "node server-new.js",
     "cleanup:dry-run": "node scripts/cleanupCloudinaryImages.js",
     "cleanup:delete": "node scripts/cleanupCloudinaryImages.js --delete",
     "cleanup:force": "node scripts/cleanupCloudinaryImages.js --delete --force",

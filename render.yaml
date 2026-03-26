@@ -5,7 +5,7 @@ services:
     env: node
     plan: free
     buildCommand: "npm install"
-    startCommand: "npm start"
+    startCommand: "node server.js"
     envVars:
       - key: NODE_ENV
         value: production
@@ -39,12 +39,6 @@ services:
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
-      - key: CLIENT_URL
-        value: https://kings-main.vercel.app
-      - key: FRONTEND_URL
-        value: https://kings-main.vercel.app
-      - key: DEVELOPMENT_URL
-        value: http://localhost:5173
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD

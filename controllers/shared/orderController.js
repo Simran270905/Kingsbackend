@@ -169,9 +169,14 @@ export const createOrder = catchAsync(async (req, res) => {
     
     // ✅ STORE CUSTOMER INFO DIRECTLY
     customer: {
+      name: orderData.user?.name || orderData.shippingAddress?.firstName && orderData.shippingAddress?.lastName ? 
+            `${orderData.shippingAddress.firstName} ${orderData.shippingAddress.lastName}` : "Guest User",
+      email: orderData.user?.email || orderData.shippingAddress?.email || "",
+      phone: orderData.user?.phone || orderData.shippingAddress?.mobile || "",
+      
+      // Keep backward compatibility
       firstName: orderData.user?.name?.split(' ')[0] || orderData.shippingAddress?.firstName || "Guest",
       lastName: orderData.user?.name?.split(' ')[1] || orderData.shippingAddress?.lastName || "User",
-      email: orderData.user?.email || orderData.shippingAddress?.email || "",
       mobile: orderData.user?.phone || orderData.shippingAddress?.mobile || ""
     }
   })

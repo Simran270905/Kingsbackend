@@ -135,8 +135,8 @@ export const createOrder = catchAsync(async (req, res) => {
     return sendError(res, 'Valid total amount is required', 400)
   }
 
-  // Get user ID if authenticated
-  const userId = req.user?.userId || null
+  // Get user ID if authenticated (optional for guest checkout)
+  const userId = req.body.user || req.user?.userId || null
 
   // Transform items to match schema
   const transformedItems = items.map(item => ({

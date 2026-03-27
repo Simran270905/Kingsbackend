@@ -165,7 +165,15 @@ export const createOrder = catchAsync(async (req, res) => {
     status: 'pending',
     amountPaid: paymentMethod === 'cod' ? 0 : totalAmount, // COD orders start with 0 paid
     paymentDate: paymentMethod === 'cod' ? null : new Date(), // COD orders have no payment date initially
-    notes: paymentMethod === 'cod' ? 'Cash on Delivery - Payment to be collected on delivery' : 'Order created successfully'
+    notes: paymentMethod === 'cod' ? 'Cash on Delivery - Payment to be collected on delivery' : 'Order created successfully',
+    
+    // ✅ STORE CUSTOMER INFO DIRECTLY
+    customer: {
+      firstName: orderData.user?.name?.split(' ')[0] || orderData.shippingAddress?.firstName || "Guest",
+      lastName: orderData.user?.name?.split(' ')[1] || orderData.shippingAddress?.lastName || "User",
+      email: orderData.user?.email || orderData.shippingAddress?.email || "",
+      mobile: orderData.user?.phone || orderData.shippingAddress?.mobile || ""
+    }
   })
 
   await order.save()

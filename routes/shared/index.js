@@ -13,6 +13,7 @@ import couponRoutes from './coupons.js'
 import contentRoutes from './content.js'
 import healthRoutes from './health.js'
 import wishlistRoutes from './wishlist.js'
+import userRoutes from '../userRoutes.js'
 
 const router = express.Router()
 
@@ -31,5 +32,6 @@ router.use('/coupons', couponRoutes)
 router.use('/content', contentRoutes)
 router.use('/health', healthRoutes) // Health check endpoints
 router.use('/wishlist', wishlistRoutes) // Wishlist endpoints
+router.use('/users', userRoutes) // Simple user authentication
 
 export default router

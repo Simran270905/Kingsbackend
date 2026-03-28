@@ -76,6 +76,24 @@ export const validateCoupon = async (req, res) => {
     const { code, userId, orderAmount } = req.body
     
     console.log('🔍 DEBUG: Validating coupon:', { code, userId, orderAmount })
+    console.log('🔍 DEBUG: Request headers:', req.headers)
+    
+    // ✅ ADDED: Validate input parameters
+    if (!code) {
+      console.log('❌ DEBUG: Missing coupon code')
+      return res.status(400).json({
+        success: false,
+        message: 'Coupon code is required'
+      })
+    }
+
+    if (!orderAmount || orderAmount <= 0) {
+      console.log('❌ DEBUG: Invalid order amount:', orderAmount)
+      return res.status(400).json({
+        success: false,
+        message: 'Valid order amount is required'
+      })
+    }
     
     const coupon = await Coupon.findOne({ code: code.toUpperCase() })
     console.log('🔍 DEBUG: Coupon found:', coupon ? 'YES' : 'NO')
@@ -96,6 +114,33 @@ export const validateCoupon = async (req, res) => {
       usedCount: coupon.usedCount,
       usageLimit: coupon.usageLimit
     })
+
+    // ✅ ADDED: Check if coupon is active
+    if (!coupon.isActive) {
+      console.log('❌ DEBUG: Coupon is not active')
+      return res.status(400).json({
+        success: false,
+        message: 'Coupon is not active'
+      })
+    }
+
+    // ✅ ADDED: Check expiry
+    const now = new Date()
+    if (coupon.validFrom > now) {
+      console.log('❌ DEBUG: Coupon not yet valid')
+      return res.status(400).json({
+        success: false,
+        message: 'Coupon is not yet valid'
+      })
+    }
+
+    if (coupon.validUntil < now) {
+      console.log('❌ DEBUG: Coupon has expired')
+      return res.status(400).json({
+        success: false,
+        message: 'Coupon has expired'
+      })
+    }
 
     if (!coupon.canBeUsedBy(userId)) {
       console.log('❌ DEBUG: Coupon cannot be used by user:', userId)
@@ -145,6 +190,7 @@ export const validateCoupon = async (req, res) => {
     })
   } catch (error) {
     console.error('❌ DEBUG: Coupon validation error:', error.message)
+    console.error('❌ DEBUG: Error stack:', error.stack)
     res.status(500).json({
       success: false,
       message: error.message

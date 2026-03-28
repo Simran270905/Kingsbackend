@@ -4,7 +4,8 @@ import {
   getCouponByCode, 
   createCoupon, 
   updateCoupon, 
-  deleteCoupon 
+  deleteCoupon,
+  validateCoupon 
 } from '../controllers/shared/couponController.js'
 import { protectAdmin } from '../middleware/auth.js'
 
@@ -13,6 +14,7 @@ const router = express.Router()
 // Public routes
 router.get('/', getAllCoupons)
 router.get('/code/:code', getCouponByCode)
+router.post('/validate', validateCoupon)
 
 // Admin only routes
 router.post('/', protectAdmin, createCoupon)

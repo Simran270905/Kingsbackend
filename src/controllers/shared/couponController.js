@@ -75,16 +75,30 @@ export const validateCoupon = async (req, res) => {
   try {
     const { code, userId, orderAmount } = req.body
     
+    console.log('🔍 DEBUG: Validating coupon:', { code, userId, orderAmount })
+    
     const coupon = await Coupon.findOne({ code: code.toUpperCase() })
+    console.log('🔍 DEBUG: Coupon found:', coupon ? 'YES' : 'NO')
     
     if (!coupon) {
+      console.log('❌ DEBUG: Coupon not found for code:', code)
       return res.status(404).json({
         success: false,
         message: 'Invalid coupon code'
       })
     }
 
+    console.log('🔍 DEBUG: Coupon details:', {
+      code: coupon.code,
+      isActive: coupon.isActive,
+      validFrom: coupon.validFrom,
+      validUntil: coupon.validUntil,
+      usedCount: coupon.usedCount,
+      usageLimit: coupon.usageLimit
+    })
+
     if (!coupon.canBeUsedBy(userId)) {
+      console.log('❌ DEBUG: Coupon cannot be used by user:', userId)
       return res.status(400).json({
         success: false,
         message: 'You have already used this coupon or it is no longer available'
@@ -92,6 +106,7 @@ export const validateCoupon = async (req, res) => {
     }
 
     if (coupon.minOrderAmount > orderAmount) {
+      console.log('❌ DEBUG: Order amount too low:', orderAmount, 'required:', coupon.minOrderAmount)
       return res.status(400).json({
         success: false,
         message: `Minimum order amount ₹${coupon.minOrderAmount} required`
@@ -113,6 +128,12 @@ export const validateCoupon = async (req, res) => {
       discountAmount = orderAmount
     }
 
+    console.log('✅ DEBUG: Coupon validation successful:', {
+      discountAmount,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue
+    })
+
     res.json({
       success: true,
       data: {
@@ -123,6 +144,7 @@ export const validateCoupon = async (req, res) => {
       }
     })
   } catch (error) {
+    console.error('❌ DEBUG: Coupon validation error:', error.message)
     res.status(500).json({
       success: false,
       message: error.message

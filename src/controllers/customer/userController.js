@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs'
-import User from '../models/User.js'
-import Order from '../models/Order.js'
+import User from '../../models/User.js'
+import Order from '../../models/Order.js'
 import jwt from 'jsonwebtoken'
-import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
+import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
 // Change customer password
 export const changePassword = catchAsync(async (req, res) => {

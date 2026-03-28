@@ -1,7 +1,7 @@
-import Order from '../models/Order.js'
-import Payment from '../models/Payment.js'
-import Product from '../models/Product.js'
-import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
+import Order from '../../models/Order.js'
+import Payment from '../../models/Payment.js'
+import Product from '../../models/Product.js'
+import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
 /**
  * Get comprehensive admin analytics including revenue validation

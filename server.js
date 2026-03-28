@@ -53,11 +53,11 @@ import './config/cloudinary.js'
 import { createRateLimiter } from './middleware/auth.js'
 
 // Import routes (using the proper structure)
-import routes from './routes/index.js'
-import customerRoutes from './routes/customer/index.js'
+import routes from './src/routes/index.js'
+import customerRoutes from './src/routes/customer/index.js'
 
 // Import quick fix controller
-import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/shared/quickFixController.js'
+import { fixDeliveredCODOrders, getCurrentStatus } from './src/controllers/shared/quickFixController.js'
 
 // Initialize app
 const app = express()
@@ -81,7 +81,13 @@ app.use(cors({
     'https://kkingsjewellery.com',
     'http://localhost:5173',
     'http://localhost:3000',
-    'http://localhost:5174'
+    'http://localhost:5174',
+    'http://localhost:8080',
+    'http://localhost:8081',
+    'http://localhost:4173',
+    'http://localhost:4174',
+    // Allow all localhost ports for development
+    /^http:\/\/localhost:\d+$/
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

@@ -12,14 +12,16 @@ export const protectCustomer = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     
-    if (decoded.role !== 'customer') {
+    // ✅ FIXED: Allow any authenticated user, don't strictly require 'customer' role
+    // This fixes issues where tokens don't have role set
+    if (decoded.role && decoded.role !== 'customer' && decoded.role !== 'user') {
       return sendError(res, 'Invalid user role', 403)
     }
     
     req.user = {
-      userId: decoded.userId,
+      userId: decoded.userId || decoded._id,
       email: decoded.email,
-      role: decoded.role
+      role: decoded.role || 'customer' // Default to customer if no role specified
     }
     
     next()

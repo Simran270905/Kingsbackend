@@ -3,8 +3,8 @@ import {
   getProductReviews, 
   addProductReview, 
   deleteReview 
-} from '../controllers/shared/reviewController.js'
-import { authenticate } from '../middleware/auth.js'
+} from '../../controllers/shared/reviewController.js'
+import { authenticate } from '../../middleware/auth.js'
 
 const router = express.Router()
 

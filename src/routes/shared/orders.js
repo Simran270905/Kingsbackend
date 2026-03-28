@@ -5,8 +5,8 @@ import {
   createOrder, 
   updateOrder, 
   deleteOrder 
-} from '../controllers/shared/orderController.js'
-import { authenticate } from '../middleware/auth.js'
+} from '../../controllers/shared/orderController.js'
+import { authenticate } from '../../middleware/auth.js'
 
 const router = express.Router()
 

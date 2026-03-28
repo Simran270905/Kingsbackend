@@ -4,8 +4,8 @@ import {
   createRazorpayOrder, 
   verifyPaymentAndCreateOrder, 
   getPaymentHistory 
-} from '../controllers/shared/paymentController.js'
-import { authenticate } from '../middleware/auth.js'
+} from '../../controllers/shared/paymentController.js'
+import { authenticate } from '../../middleware/auth.js'
 
 const router = express.Router()
 

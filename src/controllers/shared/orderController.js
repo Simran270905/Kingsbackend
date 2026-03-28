@@ -1,7 +1,7 @@
-import Order from '../models/Order.js'
-import { sendSuccess, sendError, catchAsync } from '../middleware/errorHandler.js'
-import { validateOrder } from '../utils/validation.js'
-import shiprocketService from '../services/shiprocketService.js'
+import Order from '../../models/Order.js'
+import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
+import { validateOrder } from '../../utils/validation.js'
+import shiprocketService from '../../services/shiprocketService.js'
 
 // GET all orders (Admin only)
 export const getOrders = catchAsync(async (req, res) => {

@@ -1,5 +1,5 @@
-import Product from '../models/Product.js'
-import User from '../models/User.js'
+import Product from '../../models/Product.js'
+import User from '../../models/User.js'
 
 export const addProductReview = async (req, res) => {
   try {

@@ -2,13 +2,20 @@ import Coupon from '../models/Coupon.js'
 
 export const createCoupon = async (req, res) => {
   try {
+    console.log('🔍 DEBUG: createCoupon called')
+    console.log('🔍 DEBUG: req.body:', req.body)
+    console.log('🔍 DEBUG: req.user:', req.user)
+    
     const coupon = await Coupon.create(req.body)
+    console.log('✅ DEBUG: Coupon created successfully:', coupon)
+    
     res.status(201).json({
       success: true,
       data: coupon,
       message: 'Coupon created successfully'
     })
   } catch (error) {
+    console.error('❌ DEBUG: createCoupon error:', error.message)
     res.status(400).json({
       success: false,
       message: error.message

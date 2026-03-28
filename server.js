@@ -110,9 +110,11 @@ app.use(mongoSanitize())
 app.use(createRateLimiter())
 
 // Mount routes
+console.log('🔧 DEBUG: Mounting main routes at /api')
 app.use('/api', routes)
 
 // Direct customer routes for frontend compatibility
+console.log('🔧 DEBUG: Mounting customer routes at /customers')
 app.use('/customers', customerRoutes)
 
 // Quick fix routes (temporary)

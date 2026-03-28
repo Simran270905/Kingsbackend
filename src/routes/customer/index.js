@@ -6,7 +6,9 @@ import {
   getAddresses,
   addAddress,
   deleteAddress,
-  getOrderHistory
+  getOrderHistory,
+  register,
+  login
 } from '../../controllers/customer/userController.js'
 import {
   sendOTP,
@@ -19,6 +21,8 @@ import { loginRateLimiter } from '../../middleware/auth.js'
 const router = express.Router()
 
 // Public routes
+router.post('/register', register)
+router.post('/login', login)
 router.post('/send-otp', loginRateLimiter, sendOTP)
 router.post('/verify-otp', loginRateLimiter, verifyOTPController)
 router.post('/resend-otp', loginRateLimiter, resendOTP)

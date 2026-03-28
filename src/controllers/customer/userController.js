@@ -4,6 +4,128 @@ import Order from '../../models/Order.js'
 import jwt from 'jsonwebtoken'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
+// Simple customer login
+export const login = catchAsync(async (req, res) => {
+  const { email, password } = req.body
+
+  // Validation
+  if (!email || !password) {
+    return sendError(res, 'Email and password are required', 400)
+  }
+
+  // Find user by email or phone
+  const user = await User.findOne({
+    $or: [{ email }, { phone: email }]
+  })
+
+  if (!user) {
+    return sendError(res, 'Invalid credentials', 401)
+  }
+
+  if (!user.isActive) {
+    return sendError(res, 'Account is deactivated', 401)
+  }
+
+  // If user has password, verify it
+  if (user.password) {
+    const isMatch = await bcrypt.compare(password, user.password)
+    if (!isMatch) {
+      return sendError(res, 'Invalid credentials', 401)
+    }
+  } else {
+    // For users without password (created via OTP), any password works for now
+    // In production, you might want to require password setup
+    console.log('User logging in without password set (OTP user)')
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '7d' }
+  )
+
+  sendSuccess(res, {
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      isActive: user.isActive
+    },
+    token
+  }, 200, 'Login successful')
+})
+
+// Simple customer registration
+export const register = catchAsync(async (req, res) => {
+  const { name, email, phone } = req.body
+
+  // Validation
+  if (!name || !email || !phone) {
+    return sendError(res, 'Name, email, and phone are required', 400)
+  }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    return sendError(res, 'Please enter a valid email address', 400)
+  }
+
+  // Phone validation
+  if (!/^[0-9]{10}$/.test(phone)) {
+    return sendError(res, 'Please enter a valid 10-digit phone number', 400)
+  }
+
+  // Check if user already exists
+  const existingUser = await User.findOne({
+    $or: [{ email }, { phone }]
+  })
+
+  if (existingUser) {
+    if (existingUser.email === email) {
+      return sendError(res, 'An account with this email already exists', 400)
+    }
+    if (existingUser.phone === phone) {
+      return sendError(res, 'An account with this phone number already exists', 400)
+    }
+  }
+
+  // Split name into first and last name
+  const nameParts = name.trim().split(' ')
+  const firstName = nameParts[0]
+  const lastName = nameParts.slice(1).join(' ') || ''
+
+  // Create new user
+  const user = await User.create({
+    firstName,
+    lastName,
+    email,
+    phone,
+    isActive: true
+  })
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '7d' }
+  )
+
+  sendSuccess(res, {
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      isActive: user.isActive
+    },
+    token
+  }, 201, 'Account created successfully')
+})
+
 // Change customer password
 export const changePassword = catchAsync(async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body

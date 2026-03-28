@@ -23,8 +23,35 @@ export const getOrders = catchAsync(async (req, res) => {
 
   console.log(`📋 Fetched ${orders.length} orders for admin (page ${page})`)
 
+  // Force safe data for all orders
+  const safeOrders = orders.map(order => {
+    const orderData = order._doc || order.toObject()
+    
+    return {
+      ...orderData,
+      customer: orderData.customer || {
+        name: "Guest User",
+        email: "N/A",
+        phone: "N/A",
+        firstName: "Guest",
+        lastName: "User",
+        mobile: "N/A"
+      },
+      shippingAddress: orderData.shippingAddress || {
+        firstName: "Guest",
+        lastName: "User",
+        email: "N/A",
+        mobile: "N/A",
+        streetAddress: "N/A",
+        city: "",
+        state: "",
+        zipCode: ""
+      }
+    }
+  })
+
   sendSuccess(res, {
-    orders,
+    orders: safeOrders,
     pagination: {
       total,
       page: parseInt(page),
@@ -55,6 +82,24 @@ export const getOrderById = catchAsync(async (req, res) => {
 
   const orderResponse = {
     ...order.toObject(),
+    customer: order.customer || {
+      name: "Guest User",
+      email: "N/A",
+      phone: "N/A",
+      firstName: "Guest",
+      lastName: "User",
+      mobile: "N/A"
+    },
+    shippingAddress: order.shippingAddress || {
+      firstName: "Guest",
+      lastName: "User",
+      email: "N/A",
+      mobile: "N/A",
+      streetAddress: "N/A",
+      city: "",
+      state: "",
+      zipCode: ""
+    },
     trackingInfo
   }
 

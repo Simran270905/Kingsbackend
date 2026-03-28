@@ -4,6 +4,7 @@ import { loginAdmin, verifyAdmin, logoutAdmin } from '../controllers/admin/admin
 import { getAllCustomers } from '../controllers/customer/userController.js'
 import { protectAdmin, loginRateLimiter } from '../middleware/authMiddleware.js'
 import { getAdminAnalytics, validateRevenue } from '../controllers/admin/adminAnalyticsController.js'
+import { getAllCategoriesAdmin } from '../controllers/shared/categoryController.js'
 
 const router = express.Router()
 
@@ -11,6 +12,9 @@ const router = express.Router()
 router.post('/login', loginAdmin)
 router.get('/verify', protectAdmin, verifyAdmin)
 router.post('/logout', protectAdmin, logoutAdmin)
+
+// Admin categories route
+router.get('/categories', protectAdmin, getAllCategoriesAdmin)
 
 // Debug endpoint to test admin credentials
 router.post('/test-login', (req, res) => {

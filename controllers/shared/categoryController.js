@@ -5,13 +5,21 @@ import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 // GET all active categories (public)
 export const getCategories = catchAsync(async (req, res) => {
   const categories = await Category.find({ isActive: true }).sort({ sortOrder: 1, name: 1 })
-  sendSuccess(res, { categories })
+  
+  // Always return an array, never null/undefined
+  const categoriesArray = Array.isArray(categories) ? categories : []
+  
+  sendSuccess(res, categoriesArray)
 })
 
 // GET all categories (admin - includes inactive)
 export const getAllCategoriesAdmin = catchAsync(async (req, res) => {
   const categories = await Category.find().sort({ sortOrder: 1, createdAt: -1 })
-  sendSuccess(res, { categories })
+  
+  // Always return an array, never null/undefined
+  const categoriesArray = Array.isArray(categories) ? categories : []
+  
+  sendSuccess(res, categoriesArray)
 })
 
 // GET single category

@@ -37,6 +37,28 @@ export const getAdminAnalytics = catchAsync(async (req, res) => {
   const orderRevenue = paidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
   const paymentRevenue = capturedPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
   
+  // Profit calculation
+  let totalProfit = 0
+  let profitByOrder = []
+  
+  for (const order of paidOrders) {
+    let orderProfit = 0
+    for (const item of order.items || []) {
+      // Get product to find purchase price
+      const product = await Product.findById(item.productId)
+      if (product && product.purchasePrice !== undefined) {
+        const itemProfit = (item.price || 0) - product.purchasePrice
+        orderProfit += itemProfit * (item.quantity || 1)
+      }
+    }
+    totalProfit += orderProfit
+    profitByOrder.push({
+      orderId: order._id,
+      profit: orderProfit,
+      totalAmount: order.totalAmount || 0
+    })
+  }
+  
   // Revenue validation
   const revenueMatch = Math.abs(orderRevenue - paymentRevenue) < 1 // Allow minor rounding differences
   const revenueDifference = Math.abs(orderRevenue - paymentRevenue)
@@ -196,6 +218,8 @@ export const getAdminAnalytics = catchAsync(async (req, res) => {
   const response = {
     summary: {
       totalRevenue: Math.round(totalRevenue * 100) / 100,
+      totalProfit: Math.round(totalProfit * 100) / 100,
+      profitMargin: totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 10000) / 100 : 0,
       totalOrders,
       totalPaidOrders,
       totalCustomers: uniqueCustomers.size,
@@ -226,6 +250,7 @@ export const getAdminAnalytics = catchAsync(async (req, res) => {
     dateData,
     topSellingProducts,
     recentOrders: recentOrders.slice(0, 10),
+    profitByOrder: profitByOrder.slice(0, 10),
     validation: validate === 'true' ? {
       revenueMatch,
       orderRevenue,

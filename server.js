@@ -54,6 +54,7 @@ import { createRateLimiter } from './middleware/auth.js'
 
 // Import routes (using the proper structure)
 import routes from './routes/index.js'
+import customerRoutes from './routes/customer/index.js'
 
 // Import quick fix controller
 import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/shared/quickFixController.js'
@@ -110,6 +111,9 @@ app.use(createRateLimiter())
 
 // Mount routes
 app.use('/api', routes)
+
+// Direct customer routes for frontend compatibility
+app.use('/customers', customerRoutes)
 
 // Quick fix routes (temporary)
 app.get('/api/fix/status', getCurrentStatus)

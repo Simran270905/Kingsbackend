@@ -51,10 +51,22 @@ export const getProducts = catchAsync(async (req, res) => {
   }
   
   const skip = (parseInt(page) - 1) * parseInt(limit)
-  const products = await Product.find(query)
+  let products = await Product.find(query)
     .skip(skip)
     .limit(parseInt(limit))
     .sort({ createdAt: -1 })
+  
+  // Check if this is an admin request
+  const isAdmin = req.admin || (req.user && req.user.role === 'admin')
+  
+  // Remove purchasePrice for customer APIs
+  if (!isAdmin) {
+    products = products.map(product => {
+      const productObj = product.toObject()
+      delete productObj.purchasePrice
+      return productObj
+    })
+  }
   
   const total = await Product.countDocuments(query)
   
@@ -76,7 +88,17 @@ export const getProductById = catchAsync(async (req, res) => {
     return sendError(res, 'Product not found', 404)
   }
   
-  sendSuccess(res, product)
+  // Check if this is an admin request
+  const isAdmin = req.admin || (req.user && req.user.role === 'admin')
+  
+  // Remove purchasePrice for customer APIs
+  if (!isAdmin) {
+    const productObj = product.toObject()
+    delete productObj.purchasePrice
+    sendSuccess(res, productObj)
+  } else {
+    sendSuccess(res, product)
+  }
 })
 
 // GET products by category
@@ -84,24 +106,51 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
   const { category } = req.params
   const { limit = 10 } = req.query
   
-  const products = await Product.find({ 
+  let products = await Product.find({ 
     category,
     isActive: true 
   })
     .limit(parseInt(limit))
     .sort({ createdAt: -1 })
   
+  // Check if this is an admin request
+  const isAdmin = req.admin || (req.user && req.user.role === 'admin')
+  
+  // Remove purchasePrice for customer APIs
+  if (!isAdmin) {
+    products = products.map(product => {
+      const productObj = product.toObject()
+      delete productObj.purchasePrice
+      return productObj
+    })
+  }
+  
   sendSuccess(res, products)
 })
 
 // CREATE product
 export const createProduct = catchAsync(async (req, res) => {
-  const { name, description, price, selling_price, category, brand, images, stock, sku } = req.body
+  const { name, description, purchasePrice, originalPrice, price, selling_price, category, brand, images, stock, sku } = req.body
   
   // Validate input
   const validation = validateProduct({ name, description, price, category, images })
   if (!validation.valid) {
     return sendError(res, 'Validation failed', 400, validation.errors)
+  }
+  
+  // Validate purchasePrice
+  if (purchasePrice !== undefined && (typeof purchasePrice !== 'number' || purchasePrice < 0)) {
+    return sendError(res, 'Purchase price must be a positive number', 400)
+  }
+  
+  // Validate originalPrice
+  if (originalPrice !== undefined && (typeof originalPrice !== 'number' || originalPrice < 0)) {
+    return sendError(res, 'Original price must be a positive number', 400)
+  }
+  
+  // Optional: Validate sellingPrice >= purchasePrice
+  if (purchasePrice !== undefined && selling_price !== undefined && selling_price < purchasePrice) {
+    return sendError(res, 'Selling price cannot be less than purchase price', 400)
   }
   
   // Check for duplicate SKU
@@ -115,6 +164,8 @@ export const createProduct = catchAsync(async (req, res) => {
   const product = new Product({
     name,
     description,
+    purchasePrice: purchasePrice || 0,
+    originalPrice: Number(originalPrice) || Number(price) || 0,
     price,
     selling_price,
     category,
@@ -133,6 +184,25 @@ export const createProduct = catchAsync(async (req, res) => {
 export const updateProduct = catchAsync(async (req, res) => {
   const { id } = req.params
   const updates = req.body
+
+  // Validate purchasePrice if provided
+  if (updates.purchasePrice !== undefined) {
+    if (typeof updates.purchasePrice !== 'number' || updates.purchasePrice < 0) {
+      return sendError(res, 'Purchase price must be a positive number', 400)
+    }
+  }
+
+  // Validate originalPrice if provided
+  if (updates.originalPrice !== undefined) {
+    if (typeof updates.originalPrice !== 'number' || updates.originalPrice < 0) {
+      return sendError(res, 'Original price must be a positive number', 400)
+    }
+  }
+
+  // Optional: Validate sellingPrice >= purchasePrice if both are provided
+  if (updates.purchasePrice !== undefined && updates.selling_price !== undefined && updates.selling_price < updates.purchasePrice) {
+    return sendError(res, 'Selling price cannot be less than purchase price', 400)
+  }
 
   // Cloudinary: delete removed images
   if (updates.images) {

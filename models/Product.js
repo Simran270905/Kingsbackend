@@ -40,6 +40,18 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Product description is required'],
       trim: true
     },
+    purchasePrice: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: [0, 'Purchase price must be positive']
+    },
+    originalPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: [0, 'Original price must be positive']
+    },
     price: {
       type: Number,
       required: [true, 'Product price is required'],

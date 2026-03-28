@@ -4,13 +4,13 @@ import Order from '../../models/Order.js'
 import jwt from 'jsonwebtoken'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
-// Simple customer login
+// Simple customer login (no password required)
 export const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body
+  const { email } = req.body
 
   // Validation
-  if (!email || !password) {
-    return sendError(res, 'Email and password are required', 400)
+  if (!email) {
+    return sendError(res, 'Email or phone is required', 400)
   }
 
   // Find user by email or phone
@@ -19,24 +19,15 @@ export const login = catchAsync(async (req, res) => {
   })
 
   if (!user) {
-    return sendError(res, 'Invalid credentials', 401)
+    return sendError(res, 'User not found. Please register first.', 404)
   }
 
   if (!user.isActive) {
     return sendError(res, 'Account is deactivated', 401)
   }
 
-  // If user has password, verify it
-  if (user.password) {
-    const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) {
-      return sendError(res, 'Invalid credentials', 401)
-    }
-  } else {
-    // For users without password (created via OTP), any password works for now
-    // In production, you might want to require password setup
-    console.log('User logging in without password set (OTP user)')
-  }
+  // No password required - login with just email/phone
+  console.log('User logged in with email/phone:', user.email)
 
   // Generate JWT token
   const token = jwt.sign(
@@ -45,6 +36,10 @@ export const login = catchAsync(async (req, res) => {
     { expiresIn: '7d' }
   )
 
+  // Update last login time
+  user.lastLogin = new Date()
+  await user.save()
+
   sendSuccess(res, {
     user: {
       _id: user._id,
@@ -52,7 +47,8 @@ export const login = catchAsync(async (req, res) => {
       lastName: user.lastName,
       email: user.email,
       phone: user.phone,
-      isActive: user.isActive
+      isActive: user.isActive,
+      lastLogin: user.lastLogin
     },
     token
   }, 200, 'Login successful')

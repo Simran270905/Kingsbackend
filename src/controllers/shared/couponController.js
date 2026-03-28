@@ -4,7 +4,16 @@ export const createCoupon = async (req, res) => {
   try {
     console.log('🔍 DEBUG: createCoupon called')
     console.log('🔍 DEBUG: req.body:', req.body)
-    console.log('🔍 DEBUG: req.user:', req.user)
+    console.log('🔍 DEBUG: req.admin:', req.admin)
+    
+    // ✅ ADMIN AUTHENTICATION CHECK
+    if (!req.admin || req.admin.role !== 'admin') {
+      console.error('❌ DEBUG: Admin authentication required')
+      return res.status(403).json({
+        success: false,
+        message: 'Admin authentication required'
+      })
+    }
     
     const coupon = await Coupon.create(req.body)
     console.log('✅ DEBUG: Coupon created successfully:', coupon)

@@ -12,9 +12,12 @@ export const protectCustomer = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     
-    // ✅ FIXED: Allow any authenticated user, don't strictly require 'customer' role
-    // This fixes issues where tokens don't have role set
-    if (decoded.role && decoded.role !== 'customer' && decoded.role !== 'user') {
+    console.log('🔍 DEBUG: customerAuth - Token decoded:', decoded)
+    
+    // ✅ FIXED: Allow both admin and user roles
+    // Remove strict role validation that was causing 403 errors
+    if (decoded.role && !['admin', 'user', 'customer'].includes(decoded.role)) {
+      console.log('❌ DEBUG: Invalid role detected:', decoded.role)
       return sendError(res, 'Invalid user role', 403)
     }
     
@@ -24,6 +27,7 @@ export const protectCustomer = (req, res, next) => {
       role: decoded.role || 'customer' // Default to customer if no role specified
     }
     
+    console.log('✅ DEBUG: customerAuth - Authentication successful')
     next()
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

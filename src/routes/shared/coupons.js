@@ -13,6 +13,16 @@ const router = express.Router()
 
 console.log('🔧 DEBUG: Coupon routes loaded')
 
+// ✅ ADDED: Simple test route
+router.get('/test', (req, res) => {
+  console.log('🔍 DEBUG: GET /coupons/test route hit')
+  res.json({
+    success: true,
+    message: 'Coupon routes are working!',
+    timestamp: new Date().toISOString()
+  })
+})
+
 // Public routes
 router.get('/', (req, res, next) => {
   console.log('🔍 DEBUG: GET /coupons route hit')
@@ -27,6 +37,7 @@ router.get('/code/:code', (req, res, next) => {
 router.post('/validate', (req, res, next) => {
   console.log('🔍 DEBUG: POST /coupons/validate route hit')
   console.log('🔍 DEBUG: Request body:', req.body)
+  console.log('🔍 DEBUG: Request headers:', req.headers)
   validateCoupon(req, res, next)
 })
 

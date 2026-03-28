@@ -117,6 +117,22 @@ app.use('/api', routes)
 console.log('🔧 DEBUG: Mounting customer routes at /customers')
 app.use('/customers', customerRoutes)
 
+// ✅ ADDED: Debug route to test server
+app.get('/api/debug/routes', (req, res) => {
+  console.log('🔍 DEBUG: Debug routes endpoint hit')
+  res.json({
+    success: true,
+    message: 'Server is running and routes are mounted',
+    routes: {
+      api: '/api/*',
+      customers: '/customers/*',
+      coupons: '/api/coupons/*',
+      health: '/api/health'
+    },
+    timestamp: new Date().toISOString()
+  })
+})
+
 // Quick fix routes (temporary)
 app.get('/api/fix/status', getCurrentStatus)
 app.get('/api/fix/delivered-cod', fixDeliveredCODOrders)

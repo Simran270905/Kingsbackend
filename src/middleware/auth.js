@@ -54,7 +54,11 @@ export const protectCustomer = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
 
+    console.log('🔍 DEBUG: protectCustomer called')
+    console.log('🔍 DEBUG: Auth header:', authHeader)
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ DEBUG: No auth header or invalid format')
       return res.status(401).json({
         success: false,
         message: 'No authorization token provided'
@@ -62,9 +66,13 @@ export const protectCustomer = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1]
+    console.log('🔍 DEBUG: Token extracted:', token.substring(0, 20) + '...')
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    console.log('🔍 DEBUG: Decoded token:', decoded)
 
     req.user = decoded
+    console.log('✅ DEBUG: Authentication successful')
     next()
   } catch (error) {
     console.log("❌ VERIFY ERROR:", error.message)

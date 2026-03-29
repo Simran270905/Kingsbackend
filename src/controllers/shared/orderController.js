@@ -138,16 +138,27 @@ export const createOrder = catchAsync(async (req, res) => {
   // Get user ID if authenticated
   const userId = req.user?.userId || null
 
-  // Transform items to match schema
-  const transformedItems = items.map(item => ({
-    productId: item.id || item.productId,
-    name: item.name || item.title,
-    price: item.price,
-    quantity: item.quantity,
-    selectedSize: item.selectedSize || null,
-    image: item.image || null,
-    subtotal: item.subtotal || (item.price * item.quantity)
-  }))
+  // Transform items to match schema and calculate profit
+  const transformedItems = items.map(item => {
+    const sellingPrice = item.price // This is the discounted price customer pays
+    const purchasePrice = item.purchasePrice || 0 // Cost price (internal)
+    const profitPerUnit = sellingPrice - purchasePrice
+    const subtotal = item.subtotal || (sellingPrice * item.quantity)
+    const totalProfit = profitPerUnit * item.quantity
+    
+    return {
+      productId: item.id || item.productId,
+      name: item.name || item.title,
+      price: sellingPrice, // Store selling price (what customer pays)
+      purchasePrice, // Store purchase price (cost price)
+      profitPerUnit, // Store profit per unit
+      totalProfit, // Store total profit for this item
+      quantity: item.quantity,
+      selectedSize: item.selectedSize || null,
+      image: item.image || null,
+      subtotal
+    }
+  })
 
   // Create order with payment details
   const order = new Order({

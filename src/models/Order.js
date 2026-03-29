@@ -13,7 +13,27 @@ const orderItemSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: true,
-    min: 0
+    min: 0,
+    comment: 'Selling price (what customer pays)'
+  },
+  purchasePrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+    comment: 'Cost price (internal use only)'
+  },
+  profitPerUnit: {
+    type: Number,
+    required: false,
+    default: 0,
+    comment: 'Profit per unit (sellingPrice - purchasePrice)'
+  },
+  totalProfit: {
+    type: Number,
+    required: false,
+    default: 0,
+    comment: 'Total profit for this item (profitPerUnit * quantity)'
   },
   quantity: {
     type: Number,
@@ -31,7 +51,8 @@ const orderItemSchema = new mongoose.Schema({
   subtotal: {
     type: Number,
     required: true,
-    min: 0
+    min: 0,
+    comment: 'Subtotal for this item (price * quantity)'
   }
 })
 

@@ -16,8 +16,8 @@ export const validateProduct = (product) => {
   if (!product.description || product.description.trim().length === 0) {
     errors.push('Product description is required')
   }
-  if (!product.price || product.price < 0) {
-    errors.push('Product price is required and must be positive')
+  if (!product.originalPrice || product.originalPrice < 0) {
+    errors.push('Product original price is required and must be positive')
   }
   if (!product.category || product.category.trim().length === 0) {
     errors.push('Product category is required')

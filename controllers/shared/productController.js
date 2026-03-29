@@ -130,10 +130,10 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
 
 // CREATE product
 export const createProduct = catchAsync(async (req, res) => {
-  const { name, description, purchasePrice, originalPrice, price, selling_price, category, brand, images, stock, sku } = req.body
+  const { name, description, purchasePrice, originalPrice, sellingPrice, category, brand, images, stock, sku } = req.body
   
   // Validate input
-  const validation = validateProduct({ name, description, price, category, images })
+  const validation = validateProduct({ name, description, originalPrice, category, images })
   if (!validation.valid) {
     return sendError(res, 'Validation failed', 400, validation.errors)
   }
@@ -149,7 +149,7 @@ export const createProduct = catchAsync(async (req, res) => {
   }
   
   // Optional: Validate sellingPrice >= purchasePrice
-  if (purchasePrice !== undefined && selling_price !== undefined && selling_price < purchasePrice) {
+  if (purchasePrice !== undefined && sellingPrice !== undefined && sellingPrice < purchasePrice) {
     return sendError(res, 'Selling price cannot be less than purchase price', 400)
   }
   
@@ -165,9 +165,8 @@ export const createProduct = catchAsync(async (req, res) => {
     name,
     description,
     purchasePrice: purchasePrice || 0,
-    originalPrice: Number(originalPrice) || Number(price) || 0,
-    price,
-    selling_price,
+    originalPrice: Number(originalPrice) || 0,
+    sellingPrice,
     category,
     brand: brand || null,
     images: images || [],
@@ -200,7 +199,7 @@ export const updateProduct = catchAsync(async (req, res) => {
   }
 
   // Optional: Validate sellingPrice >= purchasePrice if both are provided
-  if (updates.purchasePrice !== undefined && updates.selling_price !== undefined && updates.selling_price < updates.purchasePrice) {
+  if (updates.purchasePrice !== undefined && updates.sellingPrice !== undefined && updates.sellingPrice < updates.purchasePrice) {
     return sendError(res, 'Selling price cannot be less than purchase price', 400)
   }
 
@@ -214,7 +213,7 @@ export const updateProduct = catchAsync(async (req, res) => {
   }
   
   // Validate product data if provided
-  if (updates.name || updates.description || updates.price || updates.category || updates.images) {
+  if (updates.name || updates.description || updates.originalPrice || updates.category || updates.images) {
     const existing = await Product.findById(id)
     if (!existing) {
       return sendError(res, 'Product not found', 404)
@@ -223,7 +222,7 @@ export const updateProduct = catchAsync(async (req, res) => {
     const productData = {
       name: updates.name || existing.name,
       description: updates.description || existing.description,
-      price: updates.price || existing.price,
+      originalPrice: updates.originalPrice || existing.originalPrice,
       category: updates.category || existing.category,
       images: updates.images || existing.images
     }

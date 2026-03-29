@@ -96,10 +96,39 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
 
 // CREATE product
 export const createProduct = catchAsync(async (req, res) => {
-  const { name, description, price, selling_price, category, brand, images, stock, sku } = req.body
+  const { 
+    name, 
+    description, 
+    price, 
+    sellingPrice, 
+    selling_price, 
+    originalPrice, 
+    category, 
+    brand, 
+    images, 
+    stock, 
+    sku,
+    hasSizes,
+    sizes,
+    material,
+    purity,
+    weight,
+    isBestSeller,
+    isOnSale,
+    discountPercentage
+  } = req.body
+  
+  // ✅ FIXED: Handle both camelCase and snake_case for sellingPrice
+  const finalSellingPrice = sellingPrice || selling_price || price
   
   // Validate input
-  const validation = validateProduct({ name, description, price, category, images })
+  const validation = validateProduct({ 
+    name, 
+    description, 
+    price: finalSellingPrice, 
+    category, 
+    images 
+  })
   if (!validation.valid) {
     return sendError(res, 'Validation failed', 400, validation.errors)
   }
@@ -115,13 +144,21 @@ export const createProduct = catchAsync(async (req, res) => {
   const product = new Product({
     name,
     description,
-    price,
-    selling_price,
+    originalPrice,
+    sellingPrice: finalSellingPrice, // ✅ FIXED: Use consistent field name
     category,
     brand: brand || null,
     images: images || [],
     stock: stock || 1,
-    sku
+    sku,
+    hasSizes: hasSizes || false,
+    sizes: sizes || [],
+    material: material || 'Gold',
+    purity: purity || null,
+    weight: weight ? Number(weight) : null,
+    isBestSeller: isBestSeller || false,
+    isOnSale: isOnSale || false,
+    discountPercentage: discountPercentage || 0
   })
   
   await product.save()
@@ -134,6 +171,12 @@ export const updateProduct = catchAsync(async (req, res) => {
   const { id } = req.params
   const updates = req.body
 
+  // ✅ FIXED: Handle both camelCase and snake_case for sellingPrice
+  if (updates.sellingPrice || updates.selling_price) {
+    updates.sellingPrice = updates.sellingPrice || updates.selling_price
+    delete updates.selling_price // Remove snake_case version
+  }
+
   // Cloudinary: delete removed images
   if (updates.images) {
     const existing = await Product.findById(id)
@@ -144,7 +187,7 @@ export const updateProduct = catchAsync(async (req, res) => {
   }
   
   // Validate product data if provided
-  if (updates.name || updates.description || updates.price || updates.category || updates.images) {
+  if (updates.name || updates.description || updates.sellingPrice || updates.category || updates.images) {
     const existing = await Product.findById(id)
     if (!existing) {
       return sendError(res, 'Product not found', 404)
@@ -153,7 +196,7 @@ export const updateProduct = catchAsync(async (req, res) => {
     const productData = {
       name: updates.name || existing.name,
       description: updates.description || existing.description,
-      price: updates.price || existing.price,
+      sellingPrice: updates.sellingPrice || existing.sellingPrice,
       category: updates.category || existing.category,
       images: updates.images || existing.images
     }
@@ -210,7 +253,7 @@ export const getProductStats = catchAsync(async (req, res) => {
   
   const avgPrice = await Product.aggregate([
     { $match: { isActive: true } },
-    { $group: { _id: null, avgPrice: { $avg: '$price' } } }
+    { $group: { _id: null, avgPrice: { $avg: '$sellingPrice' } } } // ✅ FIXED: Use sellingPrice
   ])
   
   sendSuccess(res, {
@@ -244,29 +287,32 @@ export const updateBestSellerStatus = catchAsync(async (req, res) => {
 // UPDATE product sale status
 export const updateSaleStatus = catchAsync(async (req, res) => {
   const { id } = req.params
-  const { isOnSale, discountPercentage, selling_price } = req.body
+  const { isOnSale, discountPercentage, selling_price, sellingPrice } = req.body
 
   const updateData = { isOnSale }
   
   if (isOnSale) {
+    // ✅ FIXED: Handle both camelCase and snake_case
+    const finalSellingPrice = sellingPrice || selling_price
+    
     if (discountPercentage && discountPercentage > 0) {
       updateData.discountPercentage = discountPercentage
       // Calculate selling price based on discount percentage
       const product = await Product.findById(id)
       if (product) {
-        updateData.selling_price = product.price * (1 - discountPercentage / 100)
+        updateData.sellingPrice = product.originalPrice * (1 - discountPercentage / 100)
       }
-    } else if (selling_price && selling_price > 0) {
-      updateData.selling_price = selling_price
+    } else if (finalSellingPrice && finalSellingPrice > 0) {
+      updateData.sellingPrice = finalSellingPrice
       // Calculate discount percentage
       const product = await Product.findById(id)
       if (product) {
-        updateData.discountPercentage = Math.round(((product.price - selling_price) / product.price) * 100)
+        updateData.discountPercentage = Math.round(((product.originalPrice - finalSellingPrice) / product.originalPrice) * 100)
       }
     }
   } else {
     updateData.discountPercentage = 0
-    updateData.selling_price = null
+    updateData.sellingPrice = null
   }
 
   const product = await Product.findByIdAndUpdate(

@@ -251,13 +251,138 @@ export const deleteAddress = catchAsync(async (req, res) => {
   sendSuccess(res, user, 200, 'Address deleted successfully')
 })
 
+// Create new order (customer protected)
+export const createCustomerOrder = catchAsync(async (req, res) => {
+  console.log('📦 DEBUG: createCustomerOrder called')
+  console.log('📦 DEBUG: User ID from token:', req.user?.userId)
+  
+  const userId = req.user?.userId
+  if (!userId) {
+    console.log('❌ DEBUG: No userId found in request')
+    return sendError(res, 'User not authenticated', 401)
+  }
+
+  const orderData = req.body
+  console.log('📦 DEBUG: Order data received:', orderData)
+
+  // Validate required fields
+  const {
+    items,
+    shippingAddress,
+    subtotal,
+    tax = 0,
+    shippingCost = 0,
+    discount = 0,
+    couponCode = null,
+    totalAmount,
+    paymentMethod = 'cod',
+    notes
+  } = orderData
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return sendError(res, 'Order must contain at least one item', 400)
+  }
+
+  if (!shippingAddress) {
+    return sendError(res, 'Shipping address is required', 400)
+  }
+
+  if (!totalAmount || totalAmount < 0) {
+    return sendError(res, 'Valid total amount is required', 400)
+  }
+
+  // Transform items to match schema
+  const transformedItems = items.map(item => ({
+    productId: item.id || item.productId,
+    name: item.name || item.title,
+    price: item.price,
+    quantity: item.quantity,
+    selectedSize: item.selectedSize || null,
+    image: item.image || null,
+    subtotal: item.subtotal || (item.price * item.quantity)
+  }))
+
+  // Create order with proper userId
+  const order = new Order({
+    userId, // ✅ Ensure userId is properly assigned
+    items: transformedItems,
+    shippingAddress,
+    subtotal: subtotal || totalAmount,
+    tax,
+    shippingCost,
+    discount,
+    couponCode,
+    totalAmount,
+    paymentMethod,
+    paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
+    status: 'pending',
+    amountPaid: paymentMethod === 'cod' ? 0 : totalAmount,
+    paymentDate: paymentMethod === 'cod' ? null : new Date(),
+    notes: paymentMethod === 'cod' ? 'Cash on Delivery - Payment to be collected on delivery' : 'Order created successfully'
+  })
+
+  await order.save()
+  
+  console.log(`📦 Customer Order created: ${order._id} | User: ${userId} | Method: ${paymentMethod} | Amount: ₹${totalAmount}`)
+
+  // Populate user data for response
+  await order.populate('userId', 'name email mobile')
+
+  // Return standardized response
+  sendSuccess(res, {
+    success: true,
+    order,
+    message: 'Order created successfully'
+  }, 201)
+})
+
 // Get user's order history
 export const getOrderHistory = catchAsync(async (req, res) => {
-  const orders = await Order.find({ userId: req.user.userId })
+  console.log('🔍 DEBUG: getOrderHistory called')
+  console.log('🔍 DEBUG: User ID from token:', req.user?.userId)
+  
+  const userId = req.user?.userId
+  if (!userId) {
+    console.log('❌ DEBUG: No userId found in request')
+    return sendError(res, 'User not authenticated', 401)
+  }
+
+  const { status, page = 1, limit = 10 } = req.query
+  
+  let query = { userId }
+  if (status && status !== 'all') {
+    query.status = status
+  }
+
+  const skip = (parseInt(page) - 1) * parseInt(limit)
+  
+  console.log('🔍 DEBUG: Query:', query)
+  console.log('🔍 DEBUG: Page:', page, 'Limit:', limit, 'Skip:', skip)
+
+  const orders = await Order.find(query)
+    .populate('userId', 'name email mobile')
     .populate('items.productId', 'name price images')
     .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+
+  const total = await Order.countDocuments(query)
   
-  sendSuccess(res, orders)
+  console.log('✅ DEBUG: Found orders:', orders.length)
+  console.log('✅ DEBUG: Total orders:', total)
+
+  // Return standardized response format
+  sendSuccess(res, {
+    success: true,
+    orders,
+    count: orders.length,
+    pagination: {
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+      limit: parseInt(limit)
+    }
+  })
 })
 
 // Admin: Get all customers

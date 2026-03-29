@@ -8,7 +8,8 @@ import {
   deleteAddress,
   getOrderHistory,
   register,
-  login
+  login,
+  createCustomerOrder
 } from '../../controllers/customer/userController.js'
 import {
   sendOTP,
@@ -35,5 +36,7 @@ router.get('/addresses', protectCustomer, getAddresses)
 router.post('/addresses', protectCustomer, addAddress)
 router.delete('/addresses/:addressIndex', protectCustomer, deleteAddress)
 router.get('/orders', protectCustomer, getOrderHistory)
+router.get('/orders/my-orders', protectCustomer, getOrderHistory) // Add this route for frontend compatibility
+router.post('/orders', protectCustomer, createCustomerOrder) // Protected order creation
 
 export default router

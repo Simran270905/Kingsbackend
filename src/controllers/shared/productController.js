@@ -104,6 +104,7 @@ export const getProducts = catchAsync(async (req, res) => {
     .skip(skip)
     .limit(parseInt(limit))
     .sort({ createdAt: -1 })
+    .maxTimeMS(5000) // ✅ FIXED: Add 5 second timeout to prevent hanging
   
   const total = await Product.countDocuments(query)
   
@@ -155,6 +156,7 @@ export const createProduct = catchAsync(async (req, res) => {
     sellingPrice, 
     selling_price, 
     originalPrice, 
+    purchasePrice,
     category, 
     brand, 
     images, 
@@ -170,8 +172,10 @@ export const createProduct = catchAsync(async (req, res) => {
     discountPercentage
   } = req.body
   
-  // ✅ FIXED: Handle both camelCase and snake_case for sellingPrice
-  const finalSellingPrice = sellingPrice || selling_price || price
+  // ✅ FIXED: Parse prices correctly with fallback to 0
+  const parsedPurchasePrice = parseFloat(purchasePrice) || 0
+  const parsedOriginalPrice = parseFloat(originalPrice) || 0
+  const finalSellingPrice = parseFloat(sellingPrice || selling_price || price) || 0
   
   // Validate input
   const validation = validateProduct({ 
@@ -196,8 +200,9 @@ export const createProduct = catchAsync(async (req, res) => {
   const product = new Product({
     name,
     description,
-    originalPrice,
+    originalPrice: parsedOriginalPrice,
     sellingPrice: finalSellingPrice, // ✅ FIXED: Use consistent field name
+    purchasePrice: parsedPurchasePrice, // ✅ FIXED: Add purchasePrice
     category,
     brand: brand || null,
     images: images || [],
@@ -215,6 +220,14 @@ export const createProduct = catchAsync(async (req, res) => {
   })
   
   await product.save()
+  
+  // ✅ DEBUG LOG: Verify prices are saved correctly
+  console.log('✅ Product saved:', { 
+    name: product.name, 
+    purchasePrice: product.purchasePrice,
+    originalPrice: product.originalPrice, 
+    sellingPrice: product.sellingPrice 
+  })
   
   sendSuccess(res, product, 201, 'Product created successfully')
 })

@@ -24,15 +24,58 @@ const deleteCloudinaryImages = async (images = []) => {
   }
 }
 
+// DEBUG: Get all products without filtering
+export const getAllProductsDebug = catchAsync(async (req, res) => {
+  try {
+    const allProducts = await Product.find({})
+      .select('name isActive category sellingPrice originalPrice createdAt')
+      .sort({ createdAt: -1 })
+      .limit(10)
+    
+    const totalProducts = await Product.countDocuments()
+    const activeProducts = await Product.countDocuments({ isActive: true })
+    const inactiveProducts = await Product.countDocuments({ isActive: false })
+    const undefinedProducts = await Product.countDocuments({ isActive: { $exists: false } })
+    
+    console.log('🔍 DEBUG - Product counts:', {
+      total: totalProducts,
+      active: activeProducts,
+      inactive: inactiveProducts,
+      undefined: undefinedProducts
+    })
+    
+    res.json({
+      success: true,
+      data: {
+        products: allProducts,
+        counts: {
+          total: totalProducts,
+          active: activeProducts,
+          inactive: inactiveProducts,
+          undefined: undefinedProducts
+        }
+      }
+    })
+  } catch (error) {
+    console.error('❌ DEBUG endpoint error:', error)
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
+})
+
 // GET all products with filters
 export const getProducts = catchAsync(async (req, res) => {
   const { category, search, page = 1, limit = 20, bestSeller, onSale } = req.query
   
-  // ✅ FIXED: Include products without isActive field (default to true for backward compatibility)
+  // ✅ FIXED: Include products without isActive field and treat null/undefined as active
   let query = { 
     $or: [
       { isActive: true },
-      { isActive: { $exists: false } }
+      { isActive: { $exists: false } },
+      { isActive: null },
+      { isActive: { $ne: false } }
     ]
   }
   

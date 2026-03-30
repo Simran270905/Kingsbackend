@@ -4,7 +4,8 @@ import {
   getProductById, 
   createProduct, 
   updateProduct, 
-  deleteProduct 
+  deleteProduct,
+  getProductStats 
 } from '../../controllers/shared/productController.js'
 import { authenticate } from '../../middleware/auth.js'
 
@@ -12,6 +13,7 @@ const router = express.Router()
 
 // Public routes
 router.get('/', getProducts)
+router.get('/stats', getProductStats) // ✅ FIXED: Add stats endpoint before /:id
 router.get('/:id', getProductById)
 
 // Protected routes

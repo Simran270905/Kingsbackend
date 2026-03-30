@@ -7,7 +7,10 @@ import {
   updateOrderStatus,
   updateOrder,
   deleteOrder,
-  getOrderStats
+  getOrderStats,
+  trackOrder,
+  getRemainingPayment,
+  markRemainingPaymentAsPaid
 } from '../../controllers/shared/orderController.js'
 import {
   markCODOrderAsPaid,
@@ -22,6 +25,13 @@ const router = express.Router()
 
 // Public routes
 router.get('/stats', getOrderStats)
+
+// Public order tracking (no authentication required)
+router.get('/track/:orderId', trackOrder)
+
+// Remaining payment routes (admin only)
+router.get('/:orderId/remaining-payment', protectAdmin, getRemainingPayment)
+router.patch('/:orderId/remaining-payment', protectAdmin, markRemainingPaymentAsPaid)
 
 // Customer routes (authenticated customers)
 router.get('/my-orders', protectCustomer, getUserOrders)

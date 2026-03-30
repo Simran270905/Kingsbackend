@@ -2,6 +2,8 @@ import Order from '../../models/Order.js'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 import { validateOrder } from '../../utils/validation.js'
 import shiprocketService from '../../services/shiprocketService.js'
+import { processOrderDiscount } from '../../middleware/paymentDiscount.js'
+import { processOrderPayment } from '../../utils/discountCalculator.js'
 
 // GET all orders (Admin only)
 export const getOrders = catchAsync(async (req, res) => {
@@ -103,8 +105,12 @@ export const createOrder = catchAsync(async (req, res) => {
 
   const orderData = req.body
 
+  // Process payment plan and discount calculations
+  const processedOrderData = processOrderPayment(orderData)
+  console.log('📦 Processed order data with payment calculations:', processedOrderData)
+
   // Validate order data
-  const validation = validateOrder(orderData)
+  const validation = validateOrder(processedOrderData)
   if (!validation.valid) {
     return sendError(res, 'Validation failed', 400, validation.errors)
   }
@@ -119,8 +125,19 @@ export const createOrder = catchAsync(async (req, res) => {
     couponCode = null,
     totalAmount,
     paymentMethod = 'cod',
+    originalAmount,
+    discountApplied,
+    discountPercent,
+    discountedTotal,
+    paymentPlan = 'full',
+    advancePercent,
+    advanceAmount,
+    remainingPercent,
+    remainingAmount,
+    paymentMethodDiscount,
+    codCharge = 0, // ✅ NEW: Add COD charge
     notes
-  } = req.body
+  } = processedOrderData
 
   // Validate required fields
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -129,6 +146,20 @@ export const createOrder = catchAsync(async (req, res) => {
 
   if (!shippingAddress) {
     return sendError(res, 'Shipping address is required', 400)
+  }
+
+  // ✅ NEW: Validate COD charge and discount logic
+  // Validate COD charge
+  if (paymentMethod === 'cod' && codCharge !== 150) {
+    return sendError(res, 'COD orders must have exactly ₹150 handling charge', 400)
+  }
+  if (paymentMethod !== 'cod' && codCharge !== 0) {
+    return sendError(res, 'Non-COD orders cannot have COD charge', 400)
+  }
+  
+  // Validate discount logic
+  if (discountApplied && (paymentMethod !== 'upi' && paymentMethod !== 'netbanking' && paymentMethod !== 'card' && paymentPlan !== 'full')) {
+    return sendError(res, 'Discount only applies to UPI/Netbanking/Card with Full Payment', 400)
   }
 
   if (!totalAmount || totalAmount < 0) {
@@ -165,18 +196,36 @@ export const createOrder = catchAsync(async (req, res) => {
     userId,
     items: transformedItems,
     shippingAddress,
-    subtotal: subtotal || totalAmount,
+    subtotal: subtotal || originalAmount,
     tax,
     shippingCost,
     discount,
     couponCode,
-    totalAmount,
+    totalAmount: discountedTotal || totalAmount,
     paymentMethod,
     paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
     status: 'pending',
-    amountPaid: paymentMethod === 'cod' ? 0 : totalAmount, // COD orders start with 0 paid
-    paymentDate: paymentMethod === 'cod' ? null : new Date(), // COD orders have no payment date initially
-    notes: paymentMethod === 'cod' ? 'Cash on Delivery - Payment to be collected on delivery' : 'Order created successfully'
+    amountPaid: paymentMethod === 'cod' ? 0 : (paymentPlan === 'partial' ? advanceAmount : (discountedTotal || totalAmount)),
+    paymentDate: paymentMethod === 'cod' ? null : new Date(),
+    notes: paymentMethod === 'cod' ? 'Cash on Delivery - Payment to be collected on delivery' : 'Order created successfully',
+    // Payment method discount fields (keeping for backward compatibility)
+    originalAmount,
+    discountedAmount: discountedTotal,
+    discountType: paymentMethodDiscount > 0 ? 'payment_method' : (discount > 0 ? 'coupon' : null),
+    paymentMethodDiscount,
+    paymentMethodDiscountPercentage: discountPercent,
+    // New payment plan fields with 10/90 split
+    paymentPlan,
+    discountApplied,
+    discountPercent,
+    discountedTotal,
+    advancePercent,
+    advanceAmount: paymentPlan === 'partial' ? advanceAmount : null,
+    remainingPercent,
+    remainingAmount: paymentPlan === 'partial' ? remainingAmount : null,
+    remainingPaymentStatus: paymentPlan === 'partial' ? 'pending' : null,
+    // ✅ NEW: Add COD charge field
+    codCharge
   })
 
   await order.save()
@@ -318,4 +367,139 @@ export const getOrderStats = catchAsync(async (req, res) => {
   console.log(`✅ Order stats - Total: ${stats.total}, Revenue: ₹${stats.revenue}, Paid: ${stats.paymentStatus.paid}`)
   
   sendSuccess(res, stats)
+})
+
+// GET order tracking information (public endpoint)
+export const trackOrder = catchAsync(async (req, res) => {
+  const { orderId } = req.params
+  
+  if (!orderId) {
+    return sendError(res, 'Order ID is required', 400)
+  }
+  
+  // Find order by ID - only return safe public fields
+  const order = await Order.findById(orderId).select({
+    status: 1,
+    updatedAt: 1,
+    shippingAddress: 1,
+    items: 1,
+    totalAmount: 1,
+    paymentMethod: 1,
+    trackingNumber: 1,
+    trackingUrl: 1,
+    estimatedDelivery: 1,
+    createdAt: 1
+  })
+  
+  if (!order) {
+    return sendError(res, 'Order not found', 404)
+  }
+  
+  console.log(`📍 Order tracking requested: ${orderId} | Status: ${order.status}`)
+  
+  // Return only safe tracking information
+  sendSuccess(res, {
+    orderId: order._id,
+    status: order.status,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    shippingAddress: order.shippingAddress,
+    items: order.items.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      image: item.image
+    })),
+    totalAmount: order.totalAmount,
+    paymentMethod: order.paymentMethod,
+    trackingNumber: order.trackingNumber,
+    trackingUrl: order.trackingUrl,
+    estimatedDelivery: order.estimatedDelivery
+  })
+})
+
+// GET remaining payment details for an order
+export const getRemainingPayment = catchAsync(async (req, res) => {
+  const { orderId } = req.params
+  
+  if (!orderId) {
+    return sendError(res, 'Order ID is required', 400)
+  }
+  
+  const order = await Order.findById(orderId).select({
+    paymentPlan: 1,
+    advanceAmount: 1,
+    remainingAmount: 1,
+    remainingPaymentStatus: 1,
+    remainingPaymentDate: 1,
+    totalAmount: 1,
+    status: 1,
+    paymentMethod: 1
+  })
+  
+  if (!order) {
+    return sendError(res, 'Order not found', 404)
+  }
+  
+  // Only return remaining payment info for partial payment orders
+  if (order.paymentPlan !== 'partial') {
+    return sendError(res, 'This order does not have a partial payment plan', 400)
+  }
+  
+  sendSuccess(res, {
+    orderId: order._id,
+    paymentPlan: order.paymentPlan,
+    advanceAmount: order.advanceAmount,
+    remainingAmount: order.remainingAmount,
+    remainingPaymentStatus: order.remainingPaymentStatus,
+    remainingPaymentDate: order.remainingPaymentDate,
+    totalAmount: order.totalAmount,
+    status: order.status,
+    paymentMethod: order.paymentMethod
+  })
+})
+
+// PATCH mark remaining payment as received
+export const markRemainingPaymentAsPaid = catchAsync(async (req, res) => {
+  const { orderId } = req.params
+  
+  if (!orderId) {
+    return sendError(res, 'Order ID is required', 400)
+  }
+  
+  const order = await Order.findById(orderId)
+  
+  if (!order) {
+    return sendError(res, 'Order not found', 404)
+  }
+  
+  // Check if order has partial payment plan
+  if (order.paymentPlan !== 'partial') {
+    return sendError(res, 'This order does not have a partial payment plan', 400)
+  }
+  
+  // Check if remaining payment is already paid
+  if (order.remainingPaymentStatus === 'paid') {
+    return sendError(res, 'Remaining payment has already been marked as paid', 400)
+  }
+  
+  // Update remaining payment status
+  order.remainingPaymentStatus = 'paid'
+  order.remainingPaymentDate = new Date()
+  
+  // Update overall payment status to fully paid
+  order.paymentStatus = 'paid'
+  order.amountPaid = order.totalAmount
+  order.paymentDate = new Date()
+  
+  await order.save()
+  
+  console.log(`💰 Remaining payment marked as paid for order: ${orderId}`)
+  
+  sendSuccess(res, {
+    orderId: order._id,
+    remainingPaymentStatus: order.remainingPaymentStatus,
+    remainingPaymentDate: order.remainingPaymentDate,
+    paymentStatus: order.paymentStatus,
+    message: 'Remaining payment marked as paid successfully'
+  })
 })

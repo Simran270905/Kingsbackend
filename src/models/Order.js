@@ -241,6 +241,115 @@ const orderSchema = new mongoose.Schema(
     cancellationReason: {
       type: String,
       default: null
+    },
+    // Payment method discount fields (optional)
+    originalAmount: {
+      type: Number,
+      default: null,
+      min: 0,
+      comment: 'Original amount before any payment method discount'
+    },
+    discountedAmount: {
+      type: Number,
+      default: null,
+      min: 0,
+      comment: 'Final amount after payment method discount (if applicable)'
+    },
+    discountType: {
+      type: String,
+      enum: ['coupon', 'payment_method', null],
+      default: null,
+      comment: 'Type of discount applied'
+    },
+    paymentMethodDiscount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      comment: 'Discount amount from payment method (UPI/Netbanking)'
+    },
+    paymentMethodDiscountPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+      comment: 'Discount percentage from payment method'
+    },
+    // Payment plan fields (optional)
+    paymentPlan: {
+      type: String,
+      enum: ['full', 'partial'],
+      default: 'full',
+      comment: 'Payment plan type: full or partial payment'
+    },
+    // Discount information
+    originalAmount: {
+      type: Number,
+      default: null,
+      min: 0,
+      comment: 'Original amount before any discount'
+    },
+    discountApplied: {
+      type: Boolean,
+      default: false,
+      comment: 'Whether discount was applied'
+    },
+    discountPercent: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+      comment: 'Discount percentage applied'
+    },
+    discountedTotal: {
+      type: Number,
+      default: null,
+      min: 0,
+      comment: 'Final amount after discount'
+    },
+    // Partial payment breakdown (10/90 split)
+    advancePercent: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 100,
+      comment: 'Advance payment percentage'
+    },
+    advanceAmount: {
+      type: Number,
+      default: null,
+      min: 0,
+      comment: 'Advance amount paid for partial payment plan'
+    },
+    remainingPercent: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 100,
+      comment: 'Remaining payment percentage'
+    },
+    remainingAmount: {
+      type: Number,
+      default: null,
+      min: 0,
+      comment: 'Remaining amount to be paid for partial payment plan'
+    },
+    remainingPaymentStatus: {
+      type: String,
+      enum: ['pending', 'paid'],
+      default: 'pending',
+      comment: 'Status of remaining payment for partial payment plan'
+    },
+    remainingPaymentDate: {
+      type: Date,
+      default: null,
+      comment: 'Date when remaining payment was completed'
+    },
+    // COD charge field
+    codCharge: {
+      type: Number,
+      default: 0,
+      min: 0,
+      comment: 'COD handling charge (₹150 for COD orders, 0 for others)'
     }
   },
   { timestamps: true }

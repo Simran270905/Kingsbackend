@@ -79,6 +79,7 @@ app.use(cors({
   origin: [
     'https://www.kkingsjewellery.com',
     'https://kkingsjewellery.com',
+    'https://api.kkingsjewellery.com',
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:5174',

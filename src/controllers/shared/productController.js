@@ -28,7 +28,13 @@ const deleteCloudinaryImages = async (images = []) => {
 export const getProducts = catchAsync(async (req, res) => {
   const { category, search, page = 1, limit = 20, bestSeller, onSale } = req.query
   
-  let query = { isActive: true }
+  // ✅ FIXED: Include products without isActive field (default to true for backward compatibility)
+  let query = { 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
+  }
   
   if (category) {
     query.category = category
@@ -86,7 +92,10 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
   
   const products = await Product.find({ 
     category,
-    isActive: true 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
   })
     .limit(parseInt(limit))
     .sort({ createdAt: -1 })
@@ -158,7 +167,8 @@ export const createProduct = catchAsync(async (req, res) => {
     weight: weight ? Number(weight) : null,
     isBestSeller: isBestSeller || false,
     isOnSale: isOnSale || false,
-    discountPercentage: discountPercentage || 0
+    discountPercentage: discountPercentage || 0,
+    isActive: true // ✅ FIXED: Ensure new products are active by default
   })
   
   await product.save()
@@ -236,23 +246,44 @@ export const deleteProduct = catchAsync(async (req, res) => {
 
 // GET product statistics
 export const getProductStats = catchAsync(async (req, res) => {
-  const totalProducts = await Product.countDocuments({ isActive: true })
+  const totalProducts = await Product.countDocuments({ 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
+  })
   const lowStockProducts = await Product.countDocuments({ 
     stock: { $lt: 5 },
-    isActive: true 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
   })
   const categories = await Product.distinct('category')
   const bestSellers = await Product.countDocuments({ 
     isBestSeller: true, 
-    isActive: true 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
   })
   const onSaleProducts = await Product.countDocuments({ 
     isOnSale: true, 
-    isActive: true 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
   })
   
   const avgPrice = await Product.aggregate([
-    { $match: { isActive: true } },
+    { 
+      $match: { 
+        $or: [
+          { isActive: true },
+          { isActive: { $exists: false } }
+        ]
+      } 
+    },
     { $group: { _id: null, avgPrice: { $avg: '$sellingPrice' } } } // ✅ FIXED: Use sellingPrice
   ])
   
@@ -334,7 +365,10 @@ export const getBestSellers = catchAsync(async (req, res) => {
   
   const products = await Product.find({ 
     isBestSeller: true, 
-    isActive: true 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
   })
     .limit(parseInt(limit))
     .sort({ salesCount: -1, createdAt: -1 })
@@ -348,7 +382,10 @@ export const getOnSaleProducts = catchAsync(async (req, res) => {
   
   const products = await Product.find({ 
     isOnSale: true, 
-    isActive: true 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
   })
     .limit(parseInt(limit))
     .sort({ discountPercentage: -1, createdAt: -1 })

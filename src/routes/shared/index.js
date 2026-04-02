@@ -10,6 +10,7 @@ import authRoutes from './auth.js'
 import reviewRoutes from './reviews.js'
 import couponRoutes from './coupons.js'
 import contentRoutes from './content.js'
+import contactRoutes from '../contactRoutes.js'
 
 const router = express.Router()
 
@@ -25,5 +26,6 @@ router.use('/auth', authRoutes)
 router.use('/reviews', reviewRoutes)
 router.use('/coupons', couponRoutes)
 router.use('/content', contentRoutes)
+router.use('/contact', contactRoutes)
 
 export default router

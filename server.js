@@ -121,16 +121,28 @@ app.use(mongoSanitize())
 app.use(createRateLimiter())
 
 // Mount routes
-console.log('🔧 DEBUG: Mounting main routes at /api')
+console.log(' DEBUG: Mounting main routes at /api')
 app.use('/api', routes)
 
 // Direct customer routes for frontend compatibility
-console.log('🔧 DEBUG: Mounting customer routes at /customers')
+console.log(' Direct customer routes for frontend compatibility')
 app.use('/customers', customerRoutes)
 
-// ✅ ADDED: Debug route to test server
+//  ADDED: Debug route to test server
 app.get('/api/debug/routes', (req, res) => {
-  console.log('🔍 DEBUG: Debug routes endpoint hit')
+  console.log(' DEBUG: Debug routes endpoint hit')
+  
+  // Log all registered routes
+  console.log('Registered routes:')
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      const methods = Array.isArray(middleware.route.methods) 
+        ? middleware.route.methods.join(', ')
+        : middleware.route.methods;
+      console.log(`${middleware.route.path} [${methods}]`)
+    }
+  })
+  
   res.json({
     success: true,
     message: 'Server is running and routes are mounted',

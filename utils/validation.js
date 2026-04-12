@@ -44,12 +44,13 @@ export const validateOrder = (order) => {
   if (!order.shippingAddress) {
     errors.push('Shipping address is required')
   } else {
-    const { firstName, lastName, email, streetAddress, city, zipCode, mobile } = order.shippingAddress
+    const { firstName, lastName, email, streetAddress, city, state, zipCode, mobile } = order.shippingAddress
     if (!firstName) errors.push('First name is required')
     if (!lastName) errors.push('Last name is required')
     if (!email) errors.push('Email is required')
     if (!streetAddress) errors.push('Street address is required')
     if (!city) errors.push('City is required')
+    if (!state) errors.push('State is required')
     if (!zipCode) errors.push('ZIP code is required')
     if (!mobile) errors.push('Mobile number is required')
   }

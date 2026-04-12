@@ -11,17 +11,26 @@ let razorpay = null
 
 const getRazorpayInstance = () => {
   if (!razorpay) {
-    const keyId = process.env.RAZORPAY_KEY_ID
-    const keySecret = process.env.RAZORPAY_KEY_SECRET
+    const keyId = process.env.RAZORPAY_KEY_ID?.trim()
+    const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim()
+    
+    console.log('🔑 Razorpay Debug:')
+    console.log('Key ID exists:', !!keyId)
+    console.log('Key Secret exists:', !!keySecret)
+    console.log('Key ID starts with rzp_live_:', keyId?.startsWith('rzp_live_'))
+    console.log('Key ID length:', keyId?.length)
     
     if (!keyId || !keySecret) {
+      console.error('❌ Razorpay credentials missing')
       throw new Error('Razorpay credentials (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET) are not configured. Please set them in environment variables.')
     }
     
+    console.log('🔧 Creating Razorpay instance...')
     razorpay = new Razorpay({
       key_id: keyId,
       key_secret: keySecret
     })
+    console.log('✅ Razorpay instance created successfully')
   }
   return razorpay
 }

@@ -43,9 +43,19 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
   
   const { amount, currency = 'INR', receipt } = req.body
   
+  // DEBUG: Log amount details
+  console.log('🔢 FINAL AMOUNT (₹):', amount)
+  console.log('🔢 AMOUNT TYPE:', typeof amount)
+  console.log('🔢 AMOUNT VALIDATION:', !isNaN(amount) && amount > 0)
+  
   if (!amount) {
-    console.log('Amount is required')
+    console.log('❌ Amount is required')
     return sendError(res, 'Amount is required', 400)
+  }
+  
+  if (isNaN(amount) || amount <= 0) {
+    console.log('❌ Invalid amount:', amount)
+    return sendError(res, 'Invalid amount', 400)
   }
   
   try {
@@ -53,23 +63,29 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
     const razorpayInstance = getRazorpayInstance()
     console.log('Razorpay instance created successfully')
     
+    const amountInPaise = Math.round(amount * 100)
+    console.log('💰 SENDING TO RAZORPAY (paise):', amountInPaise)
+    
     const options = {
-      amount: Math.round(amount * 100), // Convert to paise
+      amount: amountInPaise, // Already converted to paise
       currency,
       receipt: receipt || `order-${Date.now()}`,
       payment_capture: 1 // Auto capture
     }
     
-    console.log('Creating order with options:', options)
+    console.log('🔧 Creating Razorpay order with options:', options)
     const razorpayOrder = await razorpayInstance.orders.create(options)
-    console.log('Razorpay order created:', razorpayOrder)
+    console.log('✅ Razorpay order created successfully:', razorpayOrder)
+    console.log('💰 Razorpay order amount (paise):', razorpayOrder.amount)
+    console.log('💰 Razorpay order amount (₹):', razorpayOrder.amount / 100)
+    console.log('📤 SENDING TO FRONTEND (paise):', amountInPaise)
     
     // Save payment record
     const payment = await Payment.create({
       orderId: null, // Will be set after order confirmation
       userId: req.user.userId,
       razorpayOrderId: razorpayOrder.id,
-      amount: amount,
+      amount: amountInPaise, // Store paise amount for consistency
       currency,
       status: 'pending',
       customerEmail: req.user.email
@@ -77,7 +93,7 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
     
     sendSuccess(res, {
       razorpayOrderId: razorpayOrder.id,
-      amount: amount,
+      amount: amountInPaise, // Send paise amount to frontend
       currency,
       paymentId: payment._id,
       key_id: process.env.RAZORPAY_KEY_ID

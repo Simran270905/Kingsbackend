@@ -16,7 +16,7 @@ export const getOrders = catchAsync(async (req, res) => {
 
   const skip = (parseInt(page) - 1) * parseInt(limit)
   const orders = await Order.find(query)
-    .populate('userId', 'name email mobile')
+    // ✅ FIXED: No userId population needed - orders now have customer objects
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(parseInt(limit))
@@ -38,7 +38,7 @@ export const getOrders = catchAsync(async (req, res) => {
 // GET single order by ID
 export const getOrderById = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id)
-    .populate('userId', 'name email mobile')
+    // ✅ FIXED: No userId population needed - orders now have customer objects
     .populate('items.productId', 'name price images')
 
   if (!order) {

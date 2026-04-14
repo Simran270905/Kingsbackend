@@ -351,14 +351,135 @@ export const exportPaymentReports = catchAsync(async (req, res) => {
     res.send(csvString)
     
   } catch (error) {
-    console.error('❌ Payment reports export error:', error)
+    console.error('Export payment reports error:', error)
     sendError(res, error.message || 'Failed to export payment reports', 500)
   }
 })
 
-export default {
+/**
+ * Create shipment for an order using Shiprocket
+ * POST /api/admin/orders/:id/create-shipment
+ */
+export const createOrderShipment = catchAsync(async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Find the order
+    const order = await Order.findById(id)
+    if (!order) {
+      return sendError(res, 'Order not found', 404)
+    }
+
+    // Validation: Only allow shipment if order is paid
+    if (order.paymentStatus !== 'paid') {
+      return sendError(res, 'Shipment can only be created for paid orders', 400)
+    }
+
+    // Validation: Check if shipment already created
+    if (order.shippingStatus !== 'not_created') {
+      return sendError(res, 'Shipment already created for this order', 400)
+    }
+
+    // Import shiprocket service
+    const shiprocketService = (await import('../services/shiprocketService.js')).default
+
+    // Create shipment
+    const shipmentResult = await shiprocketService.createOrder({
+      _id: order._id,
+      shippingAddress: order.shippingAddress,
+      items: order.items,
+      paymentMethod: order.paymentMethod,
+      shippingCost: order.shippingCost,
+      discount: order.discount,
+      subtotal: order.subtotal,
+      totalAmount: order.totalAmount,
+      notes: order.notes
+    })
+
+    if (shipmentResult.status === 'failed') {
+      return sendError(res, shipmentResult.error || 'Failed to create shipment', 500)
+    }
+
+    // Update order with shipment details
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        shiprocketOrderId: shipmentResult.shipmentId,
+        trackingUrl: shipmentResult.trackingUrl,
+        courierName: shipmentResult.courierName,
+        shippingStatus: 'created',
+        estimatedDelivery: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)) // 7 days from now
+      },
+      { new: true }
+    ).populate('userId', 'name email mobile')
+
+    // Get AWB number
+    const awbResult = await shiprocketService.getAWBNumber(shipmentResult.shipmentId)
+    if (awbResult.success) {
+      await Order.findByIdAndUpdate(
+        id,
+        {
+          awbCode: awbResult.awbNumber
+        }
+      )
+    }
+
+    sendSuccess(res, {
+      order: updatedOrder,
+      shipment: shipmentResult,
+      awbCode: awbResult.success ? awbResult.awbNumber : null
+    }, 201, 'Shipment created successfully')
+
+  } catch (error) {
+    console.error('Create shipment error:', error)
+    sendError(res, error.message || 'Failed to create shipment', 500)
+  }
+})
+
+/**
+ * Track shipment using AWB code
+ * GET /api/admin/orders/:id/track-shipment
+ */
+export const trackOrderShipment = catchAsync(async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Find the order
+    const order = await Order.findById(id)
+    if (!order) {
+      return sendError(res, 'Order not found', 404)
+    }
+
+    if (!order.shiprocketOrderId) {
+      return sendError(res, 'No shipment found for this order', 404)
+    }
+
+    // Import shiprocket service
+    const shiprocketService = (await import('../services/shiprocketService.js')).default
+
+    // Get tracking information
+    const trackingResult = await shiprocketService.getTracking(order.shiprocketOrderId)
+
+    if (!trackingResult.success) {
+      return sendError(res, trackingResult.error || 'Failed to track shipment', 500)
+    }
+
+    sendSuccess(res, {
+      order: order,
+      tracking: trackingResult.data
+    }, 200, 'Tracking information retrieved successfully')
+
+  } catch (error) {
+    console.error('Track shipment error:', error)
+    sendError(res, error.message || 'Failed to track shipment', 500)
+  }
+})
+
+export {
   getAllOrdersEnhanced,
   getOrderDetailsEnhanced,
   markCODOrderAsPaidEnhanced,
+  createOrderShipment,
+  trackOrderShipment,
   exportPaymentReports
 }

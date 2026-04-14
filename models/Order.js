@@ -195,6 +195,14 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    razorpaySignature: {
+      type: String,
+      default: null
+    },
+    paidAt: {
+      type: Date,
+      default: null
+    },
     amountPaid: {
       type: Number,
       default: 0,
@@ -221,10 +229,22 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    shiprocketOrderId: {
+      type: String,
+      default: null
+    },
+    awbCode: {
+      type: String,
+      default: null
+    },
+    courierName: {
+      type: String,
+      default: null
+    },
     shippingStatus: {
       type: String,
-      enum: ['pending', 'created', 'failed'],
-      default: 'pending'
+      enum: ['not_created', 'pending', 'created', 'shipped', 'delivered', 'failed'],
+      default: 'not_created'
     },
     estimatedDelivery: {
       type: Date,

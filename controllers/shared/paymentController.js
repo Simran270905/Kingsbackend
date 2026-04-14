@@ -256,9 +256,11 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
       status: 'confirmed', // Auto-confirm after payment success
       razorpayOrderId,
       razorpayPaymentId,
+      razorpaySignature,
+      paidAt: new Date(), // Set paid timestamp
       amountPaid: totalAmount, // Full amount paid for online payments
       paymentDate: new Date(), // Set payment date
-      notes: `Payment successful via Razorpay. Transaction ID: ${razorpayPaymentId}`
+      notes: 'Payment successful via Razorpay. Transaction ID: ' + razorpayPaymentId
     })
     
     await order.save()

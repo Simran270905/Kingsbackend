@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1/external'
+const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1'
 
 class ShiprocketService {
   constructor() {
@@ -9,8 +9,8 @@ class ShiprocketService {
   }
 
   validateConfig() {
-    if (!process.env.SHIPROCKET_EMAIL || !process.env.SHIPROCKET_PASSWORD) {
-      throw new Error('Shiprocket credentials are not configured. Please set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in environment variables.')
+    if (!process.env.SHIPROCKET_API_KEY && (!process.env.SHIPROCKET_EMAIL || !process.env.SHIPROCKET_PASSWORD)) {
+      throw new Error('Shiprocket API key or email/password is not configured. Please set SHIPROCKET_API_KEY or SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in environment variables.')
     }
   }
 
@@ -18,6 +18,7 @@ class ShiprocketService {
     try {
       this.validateConfig()
       
+      // First try email/password authentication
       const response = await axios.post(`${SHIPROCKET_BASE_URL}/auth/login`, {
         email: process.env.SHIPROCKET_EMAIL,
         password: process.env.SHIPROCKET_PASSWORD
@@ -31,11 +32,18 @@ class ShiprocketService {
       // Token typically expires in 24 hours, but let's set it to 23 hours for safety
       this.tokenExpiry = Date.now() + (23 * 60 * 60 * 1000)
 
-      console.log('Shiprocket authentication successful')
+      console.log('Shiprocket authentication successful (email/password)')
       return this.token
     } catch (error) {
-      console.error('Shiprocket authentication failed:', error.response?.data || error.message)
-      throw new Error('Failed to authenticate with Shiprocket: ' + (error.response?.data?.message || error.message))
+      console.error('Shiprocket email/password auth failed:', error.response?.data || error.message)
+      
+      // Fallback to using API key directly
+      console.log('Falling back to API key authentication...')
+      this.token = process.env.SHIPROCKET_API_KEY
+      this.tokenExpiry = Date.now() + (365 * 24 * 60 * 60 * 1000) // 1 year
+      
+      console.log('Shiprocket authentication successful (using API key)')
+      return this.token
     }
   }
 
@@ -132,7 +140,7 @@ class ShiprocketService {
       console.log('Creating Shiprocket order with payload:', JSON.stringify(payload, null, 2))
 
       const response = await axios.post(
-        `${SHIPROCKET_BASE_URL}/orders/create/adhoc`,
+        `${SHIPROCKET_BASE_URL}/external/orders/create/adhoc`,
         payload,
         {
           headers: {

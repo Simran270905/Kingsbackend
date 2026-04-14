@@ -6,7 +6,8 @@ import {
   updateProduct, 
   deleteProduct,
   getProductStats,
-  getAllProductsDebug 
+  getAllProductsDebug,
+  getSimilarProducts
 } from '../../controllers/shared/productController.js'
 import { authenticate } from '../../middleware/auth.js'
 
@@ -14,8 +15,9 @@ const router = express.Router()
 
 // Public routes
 router.get('/', getProducts)
-router.get('/stats', getProductStats) // ✅ FIXED: Add stats endpoint before /:id
-router.get('/debug', getAllProductsDebug) // ✅ DEBUG: Add debug endpoint
+router.get('/stats', getProductStats) // FIXED: Add stats endpoint before /:id
+router.get('/debug', getAllProductsDebug) // DEBUG: Add debug endpoint
+router.get('/similar/:category/:id', getSimilarProducts) // NEW: Similar products endpoint
 router.get('/:id', getProductById)
 
 // Protected routes

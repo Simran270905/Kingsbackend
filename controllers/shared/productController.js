@@ -3,6 +3,42 @@ import cloudinary from 'cloudinary'
 import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 import { validateProduct } from '../../utils/validation.js'
 
+// Simple in-memory cache for similar products
+const similarProductsCache = new Map()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes in milliseconds
+
+// Helper function to get cached similar products
+const getCachedSimilarProducts = (category, productId) => {
+  const cacheKey = `similar_${category}_${productId}`
+  const cached = similarProductsCache.get(cacheKey)
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
+  }
+  
+  // Remove expired cache
+  if (cached) {
+    similarProductsCache.delete(cacheKey)
+  }
+  
+  return null
+}
+
+// Helper function to set cached similar products
+const setCachedSimilarProducts = (category, productId, data) => {
+  const cacheKey = `similar_${category}_${productId}`
+  similarProductsCache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  })
+  
+  // Clean up old cache entries if cache gets too large
+  if (similarProductsCache.size > 100) {
+    const oldestKey = similarProductsCache.keys().next().value
+    similarProductsCache.delete(oldestKey)
+  }
+}
+
 const extractPublicId = (url) => {
   if (!url || !url.includes('cloudinary')) return null
   const parts = url.split('/')
@@ -445,6 +481,45 @@ export const getOnSaleProducts = catchAsync(async (req, res) => {
   })
     .limit(parseInt(limit))
     .sort({ discountPercentage: -1, createdAt: -1 })
+  
+  sendSuccess(res, products)
+})
+
+// GET similar products - OPTIMIZED FOR FAST LOADING WITH CACHE
+export const getSimilarProducts = catchAsync(async (req, res) => {
+  const { category, id } = req.params
+  const { limit = 6 } = req.query
+  
+  // Validate required parameters
+  if (!category || !id) {
+    return sendError(res, 'Category and product ID are required', 400)
+  }
+  
+  // Check cache first
+  const cachedProducts = getCachedSimilarProducts(category, id)
+  if (cachedProducts) {
+    console.log('Cache hit for similar products:', category)
+    return sendSuccess(res, cachedProducts)
+  }
+  
+  console.log('Cache miss, fetching from database:', category)
+  
+  // Optimized query: only essential fields, limit results, exclude current product
+  const products = await Product.find({
+    category,
+    _id: { $ne: id }, // Exclude current product
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } }
+    ]
+  })
+    .select('name sellingPrice originalPrice images category') // Only essential fields
+    .limit(parseInt(limit))
+    .sort({ createdAt: -1 })
+    .maxTimeMS(3000) // 3 second timeout
+  
+  // Cache the results
+  setCachedSimilarProducts(category, id, products)
   
   sendSuccess(res, products)
 })

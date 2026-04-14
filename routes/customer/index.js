@@ -12,7 +12,6 @@ import {
   createCustomerOrder
 } from '../../controllers/customer/userController.js'
 // Guest checkout - no auth required
-import { createCustomerOrder } from '../../controllers/customer/userController.js'
 
 const router = express.Router()
 

@@ -41,7 +41,16 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
   console.log('Request body:', req.body)
   console.log('User:', req.user)
   
-  const { amount, currency = 'INR', receipt } = req.body
+  const { amount, currency = 'INR', receipt, notes } = req.body
+  
+  // Payment methods that require full payment only
+  const fullPaymentOnlyMethods = ['upi', 'netbanking', 'card']
+  
+  // Check if payment method requires full payment only
+  if (notes && notes.paymentMethod && fullPaymentOnlyMethods.includes(notes.paymentMethod.toLowerCase())) {
+    console.log('Payment method requires full payment only:', notes.paymentMethod)
+    // Additional validation can be added here if needed
+  }
   
   // DEBUG: Log amount details
   console.log('🔢 FINAL AMOUNT (₹):', amount)
@@ -125,8 +134,21 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     razorpaySignature,
     cartItems,
     customer,
-    totalAmount
+    totalAmount,
+    orderData
   } = req.body
+  
+  // Payment methods that require full payment only
+  const fullPaymentOnlyMethods = ['upi', 'netbanking', 'card']
+  
+  // Validate payment method and plan combination
+  if (orderData && orderData.paymentMethod && orderData.paymentPlan) {
+    const paymentMethod = orderData.paymentMethod.toLowerCase()
+    if (fullPaymentOnlyMethods.includes(paymentMethod) && orderData.paymentPlan === 'partial') {
+      console.log('Partial payment not allowed for payment method:', orderData.paymentMethod)
+      return sendError(res, `Partial payment is not allowed for ${orderData.paymentMethod}. Please select full payment.`, 400)
+    }
+  }
   
   // Validation
   if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {

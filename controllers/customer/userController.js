@@ -6,20 +6,27 @@ import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandle
 
 // Simple customer login (no password required)
 export const login = catchAsync(async (req, res) => {
-  const { email } = req.body
+  console.log("🔐 LOGIN API HIT")
+  console.log("🔐 Login request body:", req.body)
 
-  // Validation
-  if (!email) {
+  const { email, mobile } = req.body
+
+  // Validation - support both email and mobile
+  const identifier = email || mobile
+  if (!identifier) {
     return sendError(res, 'Email or phone is required', 400)
   }
 
+  console.log("🔐 Looking for user with identifier:", identifier)
+
   // Find user by email or phone
   const user = await User.findOne({
-    $or: [{ email }, { phone: email }]
+    $or: [{ email: identifier }, { phone: identifier }]
   })
 
   if (!user) {
-    return sendError(res, 'User not found. Please register first.', 404)
+    console.log("❌ User not found:", identifier)
+    return sendError(res, 'Invalid credentials. Please check your email/phone and try again.', 401)
   }
 
   if (!user.isActive) {
@@ -56,6 +63,9 @@ export const login = catchAsync(async (req, res) => {
 
 // Simple customer registration
 export const register = catchAsync(async (req, res) => {
+  console.log("📝 REGISTER API HIT")
+  console.log("📝 Register request body:", req.body)
+
   const { name, email, phone } = req.body
 
   // Validation

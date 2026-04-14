@@ -26,23 +26,6 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit phone number']
     },
-    password: {
-      type: String,
-      required: false,
-      select: false
-    },
-    verified: {
-      type: Boolean,
-      default: false
-    },
-    otp: {
-      code: String,
-      expiresAt: Date,
-      attempts: {
-        type: Number,
-        default: 0
-      }
-    },
     addresses: [
       {
         firstName: { type: String, required: true },

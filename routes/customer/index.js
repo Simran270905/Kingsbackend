@@ -11,11 +11,6 @@ import {
   login,
   createCustomerOrder
 } from '../../controllers/customer/userController.js'
-import {
-  sendOTP,
-  verifyOTPController,
-  resendOTP
-} from '../../controllers/shared/otpController.js'
 import { protectCustomer } from '../../middleware/auth.js'
 import { loginRateLimiter } from '../../middleware/auth.js'
 
@@ -23,10 +18,7 @@ const router = express.Router()
 
 // Public routes
 router.post('/register', register)
-router.post('/login', login)
-router.post('/send-otp', loginRateLimiter, sendOTP)
-router.post('/verify-otp', loginRateLimiter, verifyOTPController)
-router.post('/resend-otp', loginRateLimiter, resendOTP)
+router.post('/login', loginRateLimiter, login)
 
 // Protected routes (require authentication)
 router.get('/profile', protectCustomer, getProfile)

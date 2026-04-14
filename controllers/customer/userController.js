@@ -4,15 +4,14 @@ import Order from '../../models/Order.js'
 import jwt from 'jsonwebtoken'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
-// Simple customer login (no password required)
+// Simple customer login (identifier only)
 export const login = catchAsync(async (req, res) => {
   console.log("🔐 LOGIN API HIT")
   console.log("🔐 Login request body:", req.body)
 
-  const { email, mobile } = req.body
+  const { identifier } = req.body
 
-  // Validation - support both email and mobile
-  const identifier = email || mobile
+  // Validation
   if (!identifier) {
     return sendError(res, 'Email or phone is required', 400)
   }
@@ -26,7 +25,7 @@ export const login = catchAsync(async (req, res) => {
 
   if (!user) {
     console.log("❌ User not found:", identifier)
-    return sendError(res, 'Invalid credentials. Please check your email/phone and try again.', 401)
+    return sendError(res, 'User not found', 404)
   }
 
   if (!user.isActive) {
@@ -34,7 +33,7 @@ export const login = catchAsync(async (req, res) => {
   }
 
   // No password required - login with just email/phone
-  console.log('User logged in with email/phone:', user.email)
+  console.log('User logged in with identifier:', identifier)
 
   // Generate JWT token
   const token = jwt.sign(

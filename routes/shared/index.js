@@ -5,7 +5,6 @@ import brandRoutes from './brands.js'
 import orderRoutes from './orderRoutes.js'
 import paymentRoutes from './payments.js'
 import uploadRoutes from './uploads.js'
-import otpRoutes from './otp.js'
 import authRoutes from './auth.js'
 import reviewRoutes from './reviews.js'
 import couponRoutes from './coupons.js'
@@ -21,7 +20,6 @@ router.use('/brands', brandRoutes)
 router.use('/orders', orderRoutes)
 router.use('/payments', paymentRoutes)
 router.use('/upload', uploadRoutes)
-router.use('/otp', otpRoutes)
 router.use('/auth', authRoutes)
 router.use('/reviews', reviewRoutes)
 router.use('/coupons', couponRoutes)

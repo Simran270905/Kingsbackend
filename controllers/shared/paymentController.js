@@ -45,11 +45,19 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
   
   // Payment methods that require full payment only
   const fullPaymentOnlyMethods = ['upi', 'netbanking', 'card']
+  // Payment methods that require partial payment only
+  const partialPaymentOnlyMethods = ['cod']
   
-  // Check if payment method requires full payment only
-  if (notes && notes.paymentMethod && fullPaymentOnlyMethods.includes(notes.paymentMethod.toLowerCase())) {
-    console.log('Payment method requires full payment only:', notes.paymentMethod)
-    // Additional validation can be added here if needed
+  // Check if payment method requires specific payment plan
+  if (notes && notes.paymentMethod) {
+    const paymentMethod = notes.paymentMethod.toLowerCase()
+    if (fullPaymentOnlyMethods.includes(paymentMethod)) {
+      console.log('Payment method requires full payment only:', notes.paymentMethod)
+      // Additional validation can be added here if needed
+    } else if (partialPaymentOnlyMethods.includes(paymentMethod)) {
+      console.log('Payment method requires partial payment only:', notes.paymentMethod)
+      // Additional validation can be added here if needed
+    }
   }
   
   // DEBUG: Log amount details
@@ -140,6 +148,8 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
   
   // Payment methods that require full payment only
   const fullPaymentOnlyMethods = ['upi', 'netbanking', 'card']
+  // Payment methods that require partial payment only
+  const partialPaymentOnlyMethods = ['cod']
   
   // Validate payment method and plan combination
   if (orderData && orderData.paymentMethod && orderData.paymentPlan) {
@@ -147,6 +157,10 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     if (fullPaymentOnlyMethods.includes(paymentMethod) && orderData.paymentPlan === 'partial') {
       console.log('Partial payment not allowed for payment method:', orderData.paymentMethod)
       return sendError(res, `Partial payment is not allowed for ${orderData.paymentMethod}. Please select full payment.`, 400)
+    }
+    if (partialPaymentOnlyMethods.includes(paymentMethod) && orderData.paymentPlan === 'full') {
+      console.log('Full payment not allowed for payment method:', orderData.paymentMethod)
+      return sendError(res, `Full payment is not allowed for ${orderData.paymentMethod}. Please select partial payment.`, 400)
     }
   }
   

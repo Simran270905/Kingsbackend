@@ -42,6 +42,7 @@ export const sendOTP = catchAsync(async (req, res) => {
 
   if (user) {
     // Existing user - update OTP and phone if provided
+    console.log("👤 Existing user found, updating OTP:", user.email)
     user.otp = {
       code: hashedOTP,
       expiresAt,
@@ -54,8 +55,10 @@ export const sendOTP = catchAsync(async (req, res) => {
     console.log('✅ Existing user updated with new OTP')
   } else {
     // New user - create account
-    const firstName = name.split(' ')[0]
-    const lastName = name.split(' ').slice(1).join(' ') || ''
+    console.log("🆕 New user being created:", email)
+    const nameParts = name.trim().split(' ')
+    const firstName = nameParts[0] || 'User'
+    const lastName = nameParts.slice(1).join(' ') || '' // Empty lastName if no space
     
     user = await User.create({
       firstName,
@@ -68,7 +71,7 @@ export const sendOTP = catchAsync(async (req, res) => {
         attempts: 0
       }
     })
-    console.log('✅ New user created with OTP')
+    console.log('✅ New user created with OTP:', { firstName, lastName, email })
   }
 
   // Send OTP via email with enhanced error handling

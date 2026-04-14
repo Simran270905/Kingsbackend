@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
     },
     lastName: {
       type: String,
-      required: [true, 'Last name is required'],
+      required: false, // Made optional for OTP-based registration
       trim: true
     },
     email: {

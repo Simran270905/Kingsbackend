@@ -103,7 +103,7 @@ export const getAllProductsDebug = catchAsync(async (req, res) => {
 
 // GET all products with filters
 export const getProducts = catchAsync(async (req, res) => {
-  const { category, search, page = 1, limit = 20, bestSeller, onSale } = req.query
+  const { category, search, page = 1, limit = 100, bestSeller, onSale } = req.query
   
   // ✅ FIXED: Include products without isActive field and treat null/undefined as active
   let query = { 
@@ -224,6 +224,11 @@ export const createProduct = catchAsync(async (req, res) => {
   if (!validation.valid) {
     return sendError(res, 'Validation failed', 400, validation.errors)
   }
+
+  // Validate pricing logic: selling price should never be greater than original price
+  if (finalSellingPrice > parsedOriginalPrice) {
+    return sendError(res, 'Selling price cannot be greater than MRP (original price)', 400)
+  }
   
   // Check for duplicate SKU
   if (sku) {
@@ -306,6 +311,13 @@ export const updateProduct = catchAsync(async (req, res) => {
     const validation = validateProduct(productData)
     if (!validation.valid) {
       return sendError(res, 'Validation failed', 400, validation.errors)
+    }
+
+    // Validate pricing logic: selling price should never be greater than original price
+    const finalSellingPrice = updates.sellingPrice || existing.sellingPrice
+    const finalOriginalPrice = existing.originalPrice
+    if (finalSellingPrice > finalOriginalPrice) {
+      return sendError(res, 'Selling price cannot be greater than MRP (original price)', 400)
     }
   }
   

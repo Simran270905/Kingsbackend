@@ -47,7 +47,16 @@ const productSchema = new mongoose.Schema(
     },
     sellingPrice: {
       type: Number,
-      default: null
+      default: null,
+      validate: {
+        validator: function(value) {
+          // If sellingPrice is null or undefined, it's valid
+          if (value === null || value === undefined) return true;
+          // Ensure selling price is never greater than original price
+          return value <= this.originalPrice;
+        },
+        message: 'Selling price cannot be greater than MRP (original price)'
+      }
     },
     category: {
       type: String,
@@ -148,6 +157,53 @@ const productSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+
+// Pre-save hook to calculate discount percentage correctly
+productSchema.pre('save', function(next) {
+  // Calculate discount only if both prices exist and selling price is less than original price
+  if (this.sellingPrice && this.originalPrice && this.sellingPrice < this.originalPrice) {
+    this.discountPercentage = ((this.originalPrice - this.sellingPrice) / this.originalPrice) * 100
+    this.discountPercentage = Math.round(this.discountPercentage * 100) / 100 // Round to 2 decimal places
+    this.isOnSale = true
+  } else {
+    this.discountPercentage = 0
+    this.isOnSale = false
+  }
+  next()
+})
+
+// Pre-update hook to calculate discount percentage correctly
+productSchema.pre(['findOneAndUpdate', 'findByIdAndUpdate'], function(next) {
+  const update = this.getUpdate()
+  
+  // Check if sellingPrice is being updated
+  if (update.sellingPrice || update.$set?.sellingPrice) {
+    const newSellingPrice = update.sellingPrice || update.$set?.sellingPrice
+    const originalPrice = this.originalPrice || this.getQuery().originalPrice
+    
+    if (newSellingPrice && originalPrice && newSellingPrice < originalPrice) {
+      const discountPercentage = ((originalPrice - newSellingPrice) / originalPrice) * 100
+      const roundedDiscount = Math.round(discountPercentage * 100) / 100
+      
+      if (update.$set) {
+        update.$set.discountPercentage = roundedDiscount
+        update.$set.isOnSale = true
+      } else {
+        update.discountPercentage = roundedDiscount
+        update.isOnSale = true
+      }
+    } else {
+      if (update.$set) {
+        update.$set.discountPercentage = 0
+        update.$set.isOnSale = false
+      } else {
+        update.discountPercentage = 0
+        update.isOnSale = false
+      }
+    }
+  }
+  next()
+})
 
 // Text index for full-text search
 productSchema.index({ name: 'text', description: 'text', category: 'text' })

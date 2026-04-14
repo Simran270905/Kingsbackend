@@ -58,83 +58,78 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null
-    },
-    items: [orderItemSchema],
+        items: [orderItemSchema],
     customer: {
       firstName: {
         type: String,
-        required: true
+        required: false
       },
       lastName: {
         type: String,
-        required: true
+        required: false
       },
       email: {
         type: String,
-        required: true,
+        required: false,
         match: /.+@.+\..+/
       },
       mobile: {
         type: String,
-        required: true,
+        required: false,
         match: /^[0-9]{10}$/
       },
       streetAddress: {
         type: String,
-        required: true
+        required: false
       },
       city: {
         type: String,
-        required: true
+        required: false
       },
       state: {
         type: String,
-        required: true
+        required: false
       },
       zipCode: {
         type: String,
-        required: true,
+        required: false,
         match: /^[0-9]{6}$/
       }
     },
     shippingAddress: {
       firstName: {
         type: String,
-        required: true
+        required: false
       },
       lastName: {
         type: String,
-        required: true
+        required: false
       },
       email: {
         type: String,
-        required: true,
+        required: false,
         match: /.+@.+\..+/
       },
       mobile: {
         type: String,
-        required: true,
+        required: false,
         match: /^[0-9]{10}$/
       },
       streetAddress: {
         type: String,
-        required: true
+        required: false
       },
       city: {
         type: String,
-        required: true
+        required: false
       },
       state: {
         type: String,
-        required: true
+        required: false
       },
       zipCode: {
         type: String,
-        required: true,
+        required: false,
         match: /^[0-9]{6}$/
       }
     },

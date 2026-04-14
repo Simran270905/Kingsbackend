@@ -144,8 +144,9 @@ export const createOrder = catchAsync(async (req, res) => {
     return sendError(res, 'Order must contain at least one item', 400)
   }
 
-  if (!shippingAddress) {
-    return sendError(res, 'Shipping address is required', 400)
+  // For guest checkout, shipping address is part of customer object
+  if (!orderData.firstName && !orderData.lastName && !orderData.email && !orderData.mobile) {
+    return sendError(res, 'Customer name, email and mobile are required', 400)
   }
 
   // ✅ NEW: Validate COD charge and discount logic
@@ -166,7 +167,7 @@ export const createOrder = catchAsync(async (req, res) => {
     return sendError(res, 'Valid total amount is required', 400)
   }
 
-  // Get user ID if authenticated
+  // Get user ID if authenticated (optional for guest checkout)
   const userId = req.user?.userId || null
 
   // Transform items to match schema and calculate profit
@@ -193,9 +194,19 @@ export const createOrder = catchAsync(async (req, res) => {
 
   // Create order with payment details
   const order = new Order({
-    userId,
+    // userId: // Optional - not required for guest checkout
     items: transformedItems,
-    shippingAddress,
+    // Use customer data from request body for guest checkout
+    customer: {
+      firstName: orderData.firstName || shippingAddress?.firstName || '',
+      lastName: orderData.lastName || shippingAddress?.lastName || '',
+      email: orderData.email || shippingAddress?.email || '',
+      mobile: orderData.mobile || shippingAddress?.mobile || '',
+      streetAddress: orderData.streetAddress || shippingAddress?.streetAddress || '',
+      city: orderData.city || shippingAddress?.city || '',
+      state: orderData.state || shippingAddress?.state || '',
+      zipCode: orderData.zipCode || shippingAddress?.zipCode || ''
+    },
     subtotal: subtotal || originalAmount,
     tax,
     shippingCost,
@@ -244,8 +255,8 @@ export const createOrder = catchAsync(async (req, res) => {
     }
   }
 
-  // Populate user data for response
-  await order.populate('userId', 'name email mobile')
+  // Skip user population for guest checkout
+  // await order.populate('userId', 'name email mobile')
 
   // Create shipment with Shiprocket
   try {

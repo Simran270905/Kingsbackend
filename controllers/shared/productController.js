@@ -313,6 +313,15 @@ export const updateProduct = catchAsync(async (req, res) => {
     }
   }
   
+  // STEP 6: BACKEND FIX - CONDITIONAL VALIDATION
+  // Check if pricing fields are being updated
+  const pricingFieldsUpdated = (
+    updates.originalPrice !== undefined || 
+    updates.price !== undefined || 
+    updates.purchasePrice !== undefined ||
+    updates.sellingPrice !== undefined
+  )
+
   // Validate product data if provided
   if (updates.name || updates.description || updates.sellingPrice || updates.category || updates.images) {
     const existing = await Product.findById(id)
@@ -333,11 +342,17 @@ export const updateProduct = catchAsync(async (req, res) => {
       return sendError(res, 'Validation failed', 400, validation.errors)
     }
 
-    // Validate pricing logic: selling price should never be greater than original price
-    const finalSellingPrice = updates.sellingPrice || existing.sellingPrice
-    const finalOriginalPrice = existing.originalPrice
-    if (finalSellingPrice > finalOriginalPrice) {
-      return sendError(res, 'Selling price cannot be greater than MRP (original price)', 400)
+    // STEP 6: ONLY VALIDATE PRICING WHEN PRICING FIELDS ARE MODIFIED
+    if (pricingFieldsUpdated) {
+      // Use updated values if provided, otherwise use existing values
+      const finalSellingPrice = updates.sellingPrice !== undefined ? updates.sellingPrice : existing.sellingPrice
+      const finalOriginalPrice = updates.originalPrice !== undefined ? updates.originalPrice : 
+                              updates.price !== undefined ? updates.price : existing.originalPrice
+      
+      // Validate pricing logic: selling price should never be greater than original price
+      if (finalSellingPrice && finalOriginalPrice && finalSellingPrice > finalOriginalPrice) {
+        return sendError(res, 'Selling price cannot be greater than MRP (original price)', 400)
+      }
     }
   }
   

@@ -39,7 +39,7 @@ const getRazorpayInstance = () => {
 export const createRazorpayOrder = catchAsync(async (req, res) => {
   console.log('=== CREATE RAZORPAY ORDER DEBUG ===')
   console.log('Request body:', req.body)
-  console.log('User:', req.user)
+  // Guest checkout - no user dependency
   
   const { amount, currency = 'INR', receipt, notes } = req.body
   
@@ -223,7 +223,7 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     
     // Create order with correct field names
     const order = new Order({
-      userId: req.user?.userId || null,
+      // Guest checkout - no userId required
       items: transformedItems,
       customer: {
         firstName: customer.firstName,

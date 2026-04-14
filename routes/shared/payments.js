@@ -5,16 +5,13 @@ import {
   verifyPaymentAndCreateOrder, 
   getPaymentHistory 
 } from '../../controllers/shared/paymentController.js'
-import { authenticate } from '../../middleware/auth.js'
 
 const router = express.Router()
 
-// Public routes
+// Public routes for guest checkout
 router.get('/status/:paymentId', getPaymentStatus)
-
-// Protected routes
-router.post('/create-order', authenticate, createRazorpayOrder)
-router.post('/verify', authenticate, verifyPaymentAndCreateOrder)
-router.get('/history', authenticate, getPaymentHistory)
+router.post('/create-razorpay-order', createRazorpayOrder)
+router.post('/verify', verifyPaymentAndCreateOrder)
+router.get('/history', getPaymentHistory)
 
 export default router

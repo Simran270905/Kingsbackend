@@ -35,100 +35,39 @@ const getRazorpayInstance = () => {
   return razorpay
 }
 
-// Create Razorpay Order
+// Create Razorpay Order - Simplified
 export const createRazorpayOrder = catchAsync(async (req, res) => {
-  console.log('=== CREATE RAZORPAY ORDER DEBUG ===')
-  console.log('Request body:', req.body)
-  // Guest checkout - no user dependency
-  
-  const { amount, currency = 'INR', receipt, notes } = req.body
-  
-  // Payment methods that require full payment only
-  const fullPaymentOnlyMethods = ['upi', 'netbanking', 'card']
-  // Payment methods that require partial payment only
-  const partialPaymentOnlyMethods = ['cod']
-  
-  // Check if payment method requires specific payment plan
-  if (notes && notes.paymentMethod) {
-    const paymentMethod = notes.paymentMethod.toLowerCase()
-    if (fullPaymentOnlyMethods.includes(paymentMethod)) {
-      console.log('Payment method requires full payment only:', notes.paymentMethod)
-      // Additional validation can be added here if needed
-    } else if (partialPaymentOnlyMethods.includes(paymentMethod)) {
-      console.log('Payment method requires partial payment only:', notes.paymentMethod)
-      // Additional validation can be added here if needed
-    }
-  }
-  
-  // DEBUG: Log amount details
-  console.log('🔢 FINAL AMOUNT (₹):', amount)
-  console.log('🔢 AMOUNT TYPE:', typeof amount)
-  console.log('🔢 AMOUNT VALIDATION:', !isNaN(amount) && amount > 0)
-  
-  if (!amount) {
-    console.log('❌ Amount is required')
-    return sendError(res, 'Amount is required', 400)
-  }
-  
-  if (isNaN(amount) || amount <= 0) {
-    console.log('❌ Invalid amount:', amount)
-    return sendError(res, 'Invalid amount', 400)
-  }
-  
   try {
+    const { amount, totalAmount } = req.body
+    
+    // DEBUG: Log incoming amount
+    console.log("Incoming amount:", amount || totalAmount)
+    
+    // Use totalAmount if amount is not provided
+    const finalAmount = amount || totalAmount
+    
+    if (!finalAmount) {
+      return res.status(400).json({ message: "Amount required" })
+    }
+    
+    if (isNaN(finalAmount) || finalAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" })
+    }
+    
     console.log('Getting Razorpay instance...')
     const razorpayInstance = getRazorpayInstance()
-    console.log('Razorpay instance created successfully')
     
-    const amountInPaise = Math.round(amount * 100)
-    console.log('💰 SENDING TO RAZORPAY (paise):', amountInPaise)
-    
-    const options = {
-      amount: amountInPaise, // Already converted to paise
-      currency,
-      receipt: receipt || `order-${Date.now()}`,
-      payment_capture: 1 // Auto capture
-    }
-    
-    console.log('🔧 Creating Razorpay order with options:', options)
-    const razorpayOrder = await razorpayInstance.orders.create(options)
-    console.log('✅ Razorpay order created successfully:', razorpayOrder)
-    console.log('💰 Razorpay order amount (paise):', razorpayOrder.amount)
-    console.log('💰 Razorpay order amount (₹):', razorpayOrder.amount / 100)
-    console.log('📤 SENDING TO FRONTEND (paise):', amountInPaise)
-    
-    // Save payment record
-    const payment = await Payment.create({
-      orderId: null, // Will be set after order confirmation
-      userId: req.user.userId,
-      razorpayOrderId: razorpayOrder.id,
-      amount: amountInPaise, // Store paise amount for consistency
-      currency,
-      status: 'pending',
-      customerEmail: req.user.email
+    const order = await razorpayInstance.orders.create({
+      amount: finalAmount * 100,
+      currency: "INR",
+      receipt: "receipt_" + Date.now()
     })
     
-    sendSuccess(res, {
-      razorpayOrderId: razorpayOrder.id,
-      amount: amountInPaise, // Send paise amount to frontend
-      currency,
-      paymentId: payment._id,
-      key_id: process.env.RAZORPAY_KEY_ID
-    }, 201, 'Razorpay order created')
+    console.log('Razorpay order created:', order.id)
+    res.json(order)
   } catch (error) {
-    console.error('=== CREATE RAZORPAY ORDER ERROR ===')
-    console.error('Error details:', error)
-    console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack)
-    
-    // Check if it's a Razorpay credentials error
-    if (error.message && error.message.includes('Razorpay credentials')) {
-      console.error('Razorpay credentials error detected')
-      return sendError(res, 'Payment gateway is not configured. Please contact support.', 503)
-    }
-    
-    console.error('Sending error response to frontend')
-    sendError(res, error.message || 'Failed to create Razorpay order', 500)
+    console.error("RAZORPAY ERROR:", error)
+    res.status(500).json({ message: error.message })
   }
 })
 
@@ -294,17 +233,7 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     
     console.log(`💳 Payment record updated: ${payment._id}`)
     
-    // Clear user's cart
-    await Cart.findOneAndUpdate(
-      { userId: req.user.userId },
-      {
-        items: [],
-        itemCount: 0,
-        totalPrice: 0
-      }
-    )
-    
-    console.log('🛒 Cart cleared for user:', req.user.userId)
+    // Guest checkout - no cart clearing (no user session)
     
     sendSuccess(res, {
       order: {
@@ -380,9 +309,10 @@ export const handlePaymentWebhook = catchAsync(async (req, res) => {
   }
 })
 
-// Get user's payment history
+// Get payment history (guest checkout - returns all payments or filter by customer email if available)
 export const getPaymentHistory = catchAsync(async (req, res) => {
-  const payments = await Payment.find({ userId: req.user.userId })
+  // For guest checkout, return all payments or implement customer-based filtering
+  const payments = await Payment.find({})
     .populate('orderId', 'status total createdAt')
     .sort({ createdAt: -1 })
   

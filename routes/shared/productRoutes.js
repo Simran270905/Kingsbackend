@@ -13,18 +13,19 @@ import {
   getOnSaleProducts,
   getSimilarProducts,
   getRecentProducts
-} from '../controllers/productController.js'
-import { protectAdmin } from '../middleware/authMiddleware.js'
+} from '../../controllers/shared/productController.js'
+import { protectAdmin } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
 // Public routes
 router.get('/', getProducts)
+router.get('/recent', getRecentProducts)
 router.get('/stats', getProductStats)
+
 router.get('/category/:category', getProductsByCategory)
 router.get('/best-sellers', getBestSellers)
 router.get('/on-sale', getOnSaleProducts)
-router.get('/recent', getRecentProducts)
 router.get('/similar/:category/:id', getSimilarProducts)
 router.get('/:id', getProductById)
 

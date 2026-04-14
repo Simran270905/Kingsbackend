@@ -187,19 +187,20 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
 export const getRecentProducts = catchAsync(async (req, res) => {
   const { limit = 5 } = req.query
   
-  const products = await Product.find({ 
-    $or: [
-      { isActive: true },
-      { isActive: { $exists: false } },
-      { isActive: null },
-      { isActive: { $ne: false } }
-    ]
-  })
-    .limit(parseInt(limit))
-    .sort({ createdAt: -1 })
-    .maxTimeMS(5000)
-  
-  sendSuccess(res, products)
+  try {
+    const products = await Product.find()
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 })
+      .maxTimeMS(5000)
+    
+    sendSuccess(res, products)
+  } catch (error) {
+    console.error("Recent products error:", error)
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch recent products" 
+    })
+  }
 })
 
 // CREATE product

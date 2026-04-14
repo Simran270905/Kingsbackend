@@ -1,5 +1,5 @@
 import express from 'express'
-import productRoutes from './products.js'
+import productRoutes from './productRoutes.js'
 import categoryRoutes from './categories.js'
 import brandRoutes from './brands.js'
 import orderRoutes from './orderRoutes.js'

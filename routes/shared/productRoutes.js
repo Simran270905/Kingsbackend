@@ -11,7 +11,8 @@ import {
   updateSaleStatus,
   getBestSellers,
   getOnSaleProducts,
-  getSimilarProducts
+  getSimilarProducts,
+  getRecentProducts
 } from '../controllers/productController.js'
 import { protectAdmin } from '../middleware/authMiddleware.js'
 
@@ -23,6 +24,7 @@ router.get('/stats', getProductStats)
 router.get('/category/:category', getProductsByCategory)
 router.get('/best-sellers', getBestSellers)
 router.get('/on-sale', getOnSaleProducts)
+router.get('/recent', getRecentProducts)
 router.get('/similar/:category/:id', getSimilarProducts)
 router.get('/:id', getProductById)
 

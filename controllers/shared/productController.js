@@ -183,6 +183,25 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
   sendSuccess(res, products)
 })
 
+// GET recent products (for dashboard)
+export const getRecentProducts = catchAsync(async (req, res) => {
+  const { limit = 5 } = req.query
+  
+  const products = await Product.find({ 
+    $or: [
+      { isActive: true },
+      { isActive: { $exists: false } },
+      { isActive: null },
+      { isActive: { $ne: false } }
+    ]
+  })
+    .limit(parseInt(limit))
+    .sort({ createdAt: -1 })
+    .maxTimeMS(5000)
+  
+  sendSuccess(res, products)
+})
+
 // CREATE product
 export const createProduct = catchAsync(async (req, res) => {
   const { 

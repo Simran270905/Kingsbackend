@@ -10,6 +10,7 @@ import reviewRoutes from './reviews.js'
 import couponRoutes from './coupons.js'
 import contentRoutes from './content.js'
 import contactRoutes from '../contactRoutes.js'
+import newPaymentRoutes from '../payment.routes.js'
 
 const router = express.Router()
 
@@ -19,6 +20,7 @@ router.use('/categories', categoryRoutes)
 router.use('/brands', brandRoutes)
 router.use('/orders', orderRoutes)
 router.use('/payments', paymentRoutes)
+router.use('/payment', newPaymentRoutes)
 router.use('/upload', uploadRoutes)
 // router.use('/auth', authRoutes) // Removed for guest checkout
 router.use('/reviews', reviewRoutes)

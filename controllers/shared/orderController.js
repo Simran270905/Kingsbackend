@@ -1,4 +1,5 @@
 import Order from '../../models/Order.js'
+import Product from '../../models/Product.js'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 import shiprocketService from '../../services/shiprocketService.js'
 import { validateOrder } from '../../utils/validation.js'
@@ -149,6 +150,53 @@ export const createOrder = catchAsync(async (req, res) => {
     return sendError(res, 'Customer name, email and mobile are required', 400)
   }
 
+  // STOCK MANAGEMENT: Check product availability and reserve stock
+  console.log('Checking stock availability for order items...')
+  const stockCheckResults = []
+  
+  for (const item of items) {
+    const productId = item.id || item.productId
+    if (!productId) {
+      return sendError(res, `Invalid product ID for item: ${item.name || item.title}`, 400)
+    }
+
+    const product = await Product.findById(productId)
+    if (!product) {
+      return sendError(res, `Product not found: ${item.name || item.title}`, 404)
+    }
+
+    if (!product.isActive) {
+      return sendError(res, `Product is not available: ${item.name || item.title}`, 400)
+    }
+
+    // Check stock based on whether product has sizes
+    let availableStock = 0
+    if (product.hasSizes && item.selectedSize) {
+      const sizeStock = product.sizes.find(s => s.size === item.selectedSize)
+      if (!sizeStock) {
+        return sendError(res, `Size ${item.selectedSize} not available for product: ${item.name || item.title}`, 400)
+      }
+      availableStock = sizeStock.stock
+    } else {
+      availableStock = product.stock
+    }
+
+    if (availableStock < item.quantity) {
+      return sendError(res, `Insufficient stock for ${item.name || item.title}. Available: ${availableStock}, Requested: ${item.quantity}`, 400)
+    }
+
+    stockCheckResults.push({
+      productId,
+      name: item.name || item.title,
+      requestedQty: item.quantity,
+      availableStock,
+      hasSizes: product.hasSizes,
+      selectedSize: item.selectedSize
+    })
+  }
+
+  console.log('Stock check passed for all items:', stockCheckResults)
+
   // ✅ NEW: Validate COD charge and discount logic
   // Validate COD charge
   if (paymentMethod === 'cod' && codCharge !== 150) {
@@ -247,7 +295,34 @@ export const createOrder = catchAsync(async (req, res) => {
 
   await order.save()
   
-  console.log(`📦 Order created: ${order._id} | Method: ${paymentMethod} | Payment Status: ${order.paymentStatus} | Amount: ₹${totalAmount}`)
+  console.log(` Order created: ${order._id} | Method: ${paymentMethod} | Payment Status: ${order.paymentStatus} | Amount: ${totalAmount}`)
+
+  // STOCK MANAGEMENT: Reduce stock for all ordered items
+  console.log('Reducing stock for ordered items...')
+  for (const item of stockCheckResults) {
+    try {
+      const updateQuery = {}
+      
+      if (item.hasSizes && item.selectedSize) {
+        // Reduce stock for specific size
+        updateQuery.$inc = { 'sizes.$[elem].stock': -item.requestedQty }
+        updateQuery.$elemMatch = { 'sizes': { size: item.selectedSize } }
+      } else {
+        // Reduce general stock
+        updateQuery.$inc = { stock: -item.requestedQty }
+      }
+      
+      await Product.findByIdAndUpdate(item.productId, updateQuery)
+      
+      // Update sales count
+      await Product.findByIdAndUpdate(item.productId, { $inc: { salesCount: item.requestedQty } })
+      
+      console.log(` Stock reduced for ${item.name}: -${item.requestedQty} units`)
+    } catch (error) {
+      console.error(` Failed to reduce stock for ${item.name}:`, error)
+      // Continue with other items, don't fail the order
+    }
+  }
 
   // Increment coupon usage if coupon was applied
   if (couponCode && discount > 0) {
@@ -303,15 +378,54 @@ export const updateOrderStatus = catchAsync(async (req, res) => {
     return sendError(res, `Status must be one of: ${validStatuses.join(', ')}`, 400)
   }
   
+  // Get the current order before updating
+  const currentOrder = await Order.findById(id)
+  if (!currentOrder) {
+    return sendError(res, 'Order not found', 404)
+  }
+  
+  // STOCK MANAGEMENT: Restore stock if order is being cancelled
+  if (status === 'cancelled' && currentOrder.status !== 'cancelled') {
+    console.log('Restoring stock for cancelled order items...')
+    
+    for (const item of currentOrder.items) {
+      try {
+        const product = await Product.findById(item.productId)
+        if (!product) {
+          console.error(`Product not found for stock restoration: ${item.productId}`)
+          continue
+        }
+        
+        const updateQuery = {}
+        
+        if (item.selectedSize && product.hasSizes) {
+          // Restore stock for specific size
+          updateQuery.$inc = { 'sizes.$[elem].stock': item.quantity }
+          updateQuery.$elemMatch = { 'sizes': { size: item.selectedSize } }
+        } else {
+          // Restore general stock
+          updateQuery.$inc = { stock: item.quantity }
+        }
+        
+        await Product.findByIdAndUpdate(item.productId, updateQuery)
+        
+        // Update sales count (decrease)
+        await Product.findByIdAndUpdate(item.productId, { $inc: { salesCount: -item.quantity } })
+        
+        console.log(` Stock restored for ${item.name}: +${item.quantity} units`)
+      } catch (error) {
+        console.error(` Failed to restore stock for ${item.name}:`, error)
+        // Continue with other items
+      }
+    }
+  }
+  
+  // Update the order status
   const order = await Order.findByIdAndUpdate(
     id,
     { status },
     { new: true, runValidators: true }
   )
-  
-  if (!order) {
-    return sendError(res, 'Order not found', 404)
-  }
   
   sendSuccess(res, order, 200, 'Order status updated successfully')
 })

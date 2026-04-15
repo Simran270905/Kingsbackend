@@ -4,10 +4,9 @@ import {
   getOrderDetailsEnhanced,
   markCODOrderAsPaidEnhanced,
   createOrderShipment,
-  trackOrderShipment,
-  exportPaymentReports
-} from '../controllers/enhancedOrderController.js'
-import { protectAdmin } from '../middleware/authMiddleware.js'
+  trackOrderShipment
+} from '../../controllers/admin/enhancedOrderController.js'
+import { protectAdmin } from '../../middleware/auth.js'
 
 const router = express.Router()
 
@@ -17,6 +16,5 @@ router.get('/enhanced/:id', protectAdmin, getOrderDetailsEnhanced)
 router.put('/enhanced/:id/mark-cod-paid', protectAdmin, markCODOrderAsPaidEnhanced)
 router.post('/enhanced/:id/create-shipment', protectAdmin, createOrderShipment)
 router.get('/enhanced/:id/track-shipment', protectAdmin, trackOrderShipment)
-router.get('/payment-reports/csv', protectAdmin, exportPaymentReports)
 
 export default router

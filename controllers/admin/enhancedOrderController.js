@@ -1,5 +1,5 @@
-import Order from '../models/Order.js'
-import { sendSuccess, sendError, catchAsync } from '../utils/errorHandler.js'
+import Order from '../../models/Order.js'
+import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
 /**
  * Get all orders with payment details and filtering
@@ -40,7 +40,7 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     
     // Fetch orders with payment details and customer information
     const orders = await Order.find(query)
-      .populate('userId', 'name email mobile')
+      .populate('paymentId', 'razorpayPaymentId status createdAt')
       .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit))
@@ -180,7 +180,6 @@ export const getOrderDetailsEnhanced = catchAsync(async (req, res) => {
     const { id } = req.params
     
     const order = await Order.findById(id)
-      .populate('userId', 'name email mobile')
       .populate('paymentId', 'razorpayOrderId razorpayPaymentId status amount')
       .lean()
     
@@ -303,103 +302,8 @@ export const markCODOrderAsPaidEnhanced = catchAsync(async (req, res) => {
     }
     
   } catch (error) {
-    console.error('❌ Enhanced COD payment marking error:', error)
+    console.error('Mark COD as paid error:', error)
     sendError(res, error.message || 'Failed to mark COD order as paid', 500)
-  }
-})
-
-/**
- * Export payment reports as CSV
- * GET /api/admin/orders/payment-reports/csv
- */
-export const exportPaymentReports = catchAsync(async (req, res) => {
-  try {
-    const { 
-      status, 
-      paymentStatus, 
-      paymentMethod,
-      startDate, 
-      endDate 
-    } = req.query
-    
-    // Build date range query
-    const dateQuery = {}
-    if (startDate || endDate) {
-      dateQuery.createdAt = {}
-      if (startDate) dateQuery.createdAt.$gte = new Date(startDate)
-      if (endDate) dateQuery.createdAt.$lte = new Date(endDate)
-    }
-    
-    // Add other filters
-    const query = { ...dateQuery }
-    if (status) query.status = status
-    if (paymentStatus) query.paymentStatus = paymentStatus
-    if (paymentMethod) query.paymentMethod = paymentMethod
-    
-    // Fetch all matching orders
-    const orders = await Order.find(query)
-      .populate('userId', 'name email mobile')
-      .sort({ createdAt: -1 })
-      .lean()
-    
-    // Generate CSV data
-    const csvHeaders = [
-      'Order ID',
-      'Order Number',
-      'Customer Name',
-      'Customer Email',
-      'Customer Mobile',
-      'Payment Method',
-      'Payment Status',
-      'Amount Paid',
-      'Total Amount',
-      'Payment Date',
-      'Transaction ID',
-      'Order Status',
-      'Created Date'
-    ]
-    
-    const csvData = orders.map(order => {
-      const customerName = `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim()
-      
-      return [
-        order._id.toString(),
-        order._id.toString().slice(-8).toUpperCase(),
-        customerName,
-        order.customer?.email || '',
-        order.customer?.mobile || '',
-        order.paymentMethod || 'N/A',
-        order.paymentStatus || 'N/A',
-        order.amountPaid || 0,
-        order.totalAmount || 0,
-        order.paymentDate ? new Date(order.paymentDate).toISOString() : 'N/A',
-        order.razorpayPaymentId || order.razorpayOrderId || 'N/A',
-        order.status || 'N/A',
-        order.createdAt ? new Date(order.createdAt).toISOString() : 'N/A'
-      ]
-    })
-    
-    // Convert to CSV string
-    const csvString = [
-      csvHeaders.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-    
-    // Set headers for CSV download
-    res.setHeader('Content-Type', 'text/csv')
-    res.setHeader('Content-Disposition', `attachment; filename=payment-reports-${new Date().toISOString().split('T')[0]}.csv`)
-    
-    console.log('📊 Payment reports exported:', {
-      totalOrders: orders.length,
-      dateRange: { startDate, endDate },
-      filters: { status, paymentStatus, paymentMethod }
-    })
-    
-    res.send(csvString)
-    
-  } catch (error) {
-    console.error('Export payment reports error:', error)
-    sendError(res, error.message || 'Failed to export payment reports', 500)
   }
 })
 
@@ -428,12 +332,12 @@ export const createOrderShipment = catchAsync(async (req, res) => {
     }
 
     // Import shiprocket service
-    const shiprocketService = (await import('../services/shiprocketService.js')).default
+    const shiprocketService = (await import('../../services/shiprocketService.js')).default
 
     // Create shipment
     const shipmentResult = await shiprocketService.createOrder({
       _id: order._id,
-      shippingAddress: order.shippingAddress,
+      shippingAddress: order.guestInfo || order.shippingAddress,
       items: order.items,
       paymentMethod: order.paymentMethod,
       shippingCost: order.shippingCost,
@@ -458,8 +362,8 @@ export const createOrderShipment = catchAsync(async (req, res) => {
         estimatedDelivery: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)) // 7 days from now
       },
       { new: true }
-    ).populate('userId', 'name email mobile')
-
+    )
+    
     // Get AWB number
     const awbResult = await shiprocketService.getAWBNumber(shipmentResult.shipmentId)
     if (awbResult.success) {
@@ -502,7 +406,7 @@ export const trackOrderShipment = catchAsync(async (req, res) => {
     }
 
     // Import shiprocket service
-    const shiprocketService = (await import('../services/shiprocketService.js')).default
+    const shiprocketService = (await import('../../services/shiprocketService.js')).default
 
     // Get tracking information
     const trackingResult = await shiprocketService.getTracking(order.shiprocketOrderId)
@@ -522,11 +426,3 @@ export const trackOrderShipment = catchAsync(async (req, res) => {
   }
 })
 
-export {
-  getAllOrdersEnhanced,
-  getOrderDetailsEnhanced,
-  markCODOrderAsPaidEnhanced,
-  createOrderShipment,
-  trackOrderShipment,
-  exportPaymentReports
-}

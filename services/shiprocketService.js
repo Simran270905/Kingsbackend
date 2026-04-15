@@ -15,36 +15,28 @@ class ShiprocketService {
   }
 
   async authenticate() {
-    try {
-      this.validateConfig()
-      
-      // First try email/password authentication
-      const response = await axios.post(`${SHIPROCKET_BASE_URL}/auth/login`, {
-        email: process.env.SHIPROCKET_EMAIL,
-        password: process.env.SHIPROCKET_PASSWORD
-      })
-
-      if (!response.data || !response.data.token) {
-        throw new Error('Invalid Shiprocket credentials')
-      }
-
-      this.token = response.data.token
-      // Token typically expires in 24 hours, but let's set it to 23 hours for safety
-      this.tokenExpiry = Date.now() + (23 * 60 * 60 * 1000)
-
-      console.log('Shiprocket authentication successful (email/password)')
-      return this.token
-    } catch (error) {
-      console.error('Shiprocket email/password auth failed:', error.response?.data || error.message)
-      
-      // Fallback to using API key directly
-      console.log('Falling back to API key authentication...')
-      this.token = process.env.SHIPROCKET_API_KEY
-      this.tokenExpiry = Date.now() + (365 * 24 * 60 * 60 * 1000) // 1 year
-      
-      console.log('Shiprocket authentication successful (using API key)')
-      return this.token
+    this.validateConfig()
+    
+    // Use External API authentication directly (main account is locked)
+    console.log('Using External API authentication...')
+    
+    // Use External API authentication with API User credentials
+    const response = await axios.post(`${SHIPROCKET_BASE_URL}/external/auth/login`, {
+      email: process.env.SHIPROCKET_API_EMAIL,
+      password: process.env.SHIPROCKET_API_PASSWORD
+    })
+    
+    if (!response.data || !response.data.token) {
+      throw new Error('Invalid Shiprocket API User credentials')
     }
+    
+    this.token = response.data.token
+    // Token is valid for 240 hours (10 days)
+    this.tokenExpiry = Date.now() + (240 * 60 * 60 * 1000) // 10 days
+    
+    console.log('Shiprocket external API authentication successful')
+    console.log('Token expires in:', new Date(this.tokenExpiry))
+    return this.token
   }
 
   async getToken() {

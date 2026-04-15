@@ -14,8 +14,6 @@ import {
   getSimilarProducts,
   getRecentProducts
 } from '../../controllers/shared/productController.js'
-import { debugProductCategories } from '../../debug-products.js'
-import { fixProductCategories } from '../../fix-product-categories.js'
 import { protectAdmin } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
@@ -30,11 +28,6 @@ router.get('/best-sellers', getBestSellers)
 router.get('/on-sale', getOnSaleProducts)
 router.get('/similar/:category/:id', getSimilarProducts)
 
-// Debug endpoint (before /:id to prevent conflicts)
-router.get('/debug-categories', debugProductCategories)
-
-// Fix categories endpoint
-router.post('/fix-categories', protectAdmin, fixProductCategories)
 
 router.get('/:id', getProductById)
 

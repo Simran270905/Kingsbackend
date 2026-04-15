@@ -49,6 +49,13 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: null
     },
+    purchasePrice: {
+      type: Number,
+      required: false,
+      min: [0, 'Purchase price cannot be negative'],
+      default: 0,
+      comment: 'Cost price for internal profit calculations'
+    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',

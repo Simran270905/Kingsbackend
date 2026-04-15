@@ -370,6 +370,7 @@ export const updateProduct = catchAsync(async (req, res) => {
       description: req.body.description || existing.description,
       originalPrice: req.body.originalPrice || existing.originalPrice,
       sellingPrice: req.body.sellingPrice || existing.sellingPrice,
+      purchasePrice: req.body.purchasePrice !== undefined ? req.body.purchasePrice : existing.purchasePrice,
       category: req.body.category || existing.category,
       images: req.body.images || existing.images
     }

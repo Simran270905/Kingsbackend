@@ -5,6 +5,7 @@ import { getAllCustomers } from '../../controllers/customer/userController.js'
 import { protectAdmin } from '../../middleware/auth.js'
 import { getAdminAnalytics, validateRevenue } from '../../controllers/admin/adminAnalyticsController.js'
 import { sendSuccess, sendError } from '../../middleware/errorHandler.js'
+import orderRoutes from './enhancedOrderRoutes.js'
 
 const router = express.Router()
 
@@ -41,5 +42,9 @@ router.post('/test-login', (req, res) => {
 router.get('/customers', protectAdmin, getAllCustomers)
 router.get('/analytics', protectAdmin, getAdminAnalytics)
 router.get('/analytics/validate-revenue', protectAdmin, validateRevenue)
+
+// New order routes
+router.use('/orders', orderRoutes)
+// Note: analytics routes are already defined above
 
 export default router

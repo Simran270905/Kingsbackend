@@ -58,11 +58,20 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
       return res.status(400).json({ message: "Invalid amount" })
     }
     
+    // Minimum amount validation (₹1.00 minimum for Razorpay)
+    if (finalAmount < 1) {
+      return res.status(400).json({ 
+        message: "Minimum order amount is ₹1.00",
+        currentAmount: finalAmount,
+        minimumAmount: 1.00
+      })
+    }
+    
     console.log('Getting Razorpay instance...')
     const razorpayInstance = getRazorpayInstance()
     
     const order = await razorpayInstance.orders.create({
-      amount: finalAmount * 100,
+      amount: Math.round(finalAmount * 100),
       currency: "INR",
       receipt: "receipt_" + Date.now()
     })

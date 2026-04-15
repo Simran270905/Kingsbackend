@@ -68,8 +68,8 @@ class ShiprocketService {
   }
 
   validateConfig() {
-    if (!process.env.SHIPROCKET_API_KEY && (!process.env.SHIPROCKET_EMAIL || !process.env.SHIPROCKET_PASSWORD)) {
-      throw new Error('Shiprocket API key or email/password is not configured. Please set SHIPROCKET_API_KEY or SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in environment variables.')
+    if (!process.env.SHIPROCKET_API_KEY && (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD)) {
+      throw new Error('Shiprocket API key or email/password is not configured. Please set SHIPROCKET_API_KEY or SHIPROCKET_API_EMAIL and SHIPROCKET_API_PASSWORD in environment variables.')
     }
   }
 

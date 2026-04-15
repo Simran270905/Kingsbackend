@@ -174,7 +174,7 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
       status: paymentDetails.status,
       amount: paymentDetails.amount,
       currency: paymentDetails.currency,
-      captured: paymentDetails.captured
+      captured: paymentDetails.captured,
       method: paymentDetails.method,
       created_at: paymentDetails.created_at
     })
@@ -189,6 +189,13 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     }
     
     console.log(`💰 Payment captured successfully. Amount: ₹${paymentDetails.amount / 100}`)
+    console.log('🔍 Detailed Payment Info:')
+    console.log('- Razorpay Order ID:', paymentDetails.id)
+    console.log('- Payment ID:', paymentDetails.razorpay_payment_id)
+    console.log('- Payment Method:', paymentDetails.method)
+    console.log('- Payment Type:', paymentDetails.captured ? 'Captured' : 'Authorized')
+    console.log('- Payment Currency:', paymentDetails.currency)
+    console.log('- Created At:', paymentDetails.created_at)
     
     // Transform cart items to match order schema
     console.log('🛒 Creating order with transformed items...')
@@ -243,8 +250,62 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
       paidAt: new Date(), // Set paid timestamp
       amountPaid: totalAmount, // Full amount paid for online payments
       paymentDate: new Date(), // Set payment date
-      notes: 'Payment successful via Razorpay. Transaction ID: ' + razorpayPaymentId
-    })
+      notes: 'Payment successful via Razorpay. Transaction ID: ' + razorpayPaymentId,
+      // Store comprehensive payment details
+      paymentDetails: {
+        razorpayOrderId: paymentDetails.id,
+        razorpayPaymentId: paymentDetails.razorpay_payment_id,
+        razorpaySignature: paymentDetails.razorpay_signature,
+        razorpayOrderCreationId: paymentDetails.order_id,
+        razorpayAmount: paymentDetails.amount / 100, // Convert from paise to rupees
+        razorpayCurrency: paymentDetails.currency,
+        razorpayMethod: paymentDetails.method,
+        razorpayStatus: paymentDetails.status,
+        razorpayCaptured: paymentDetails.captured,
+        razorpayCreatedAt: paymentDetails.created_at,
+        razorpayBank: paymentDetails.bank || null,
+        razorpayWallet: paymentDetails.wallet || null,
+        razorpayVPA: paymentDetails.vpa || null,
+        razorpayEmail: paymentDetails.email || null,
+        razorpayContact: paymentDetails.contact || null,
+        razorpayFee: paymentDetails.fee || null,
+        razorpayTax: paymentDetails.tax || null,
+        razorpayDescription: paymentDetails.description || null,
+        razorpayCardId: paymentDetails.card_id || null,
+        razorpayInternational: paymentDetails.international || false,
+        razorpayEmi: paymentDetails.emi || null,
+        razorpayRetryCount: paymentDetails.retry_count || 0,
+        razorpayFailureReason: paymentDetails.failure_reason || null,
+        razorpayAcquirer: paymentDetails.acquirer_data?.bank || paymentDetails.acquirer_data?.wallet || null,
+        razorpayErrorDescription: paymentDetails.error_description || null,
+        razorpayErrorSource: paymentDetails.error_source || null,
+        razorpayErrorCode: paymentDetails.error_code || null,
+        razorpayRefundStatus: paymentDetails.refund_status || null,
+        razorpaySpeed: paymentDetails.speed || null,
+        razorpayUmeVerification: paymentDetails.verification || false,
+        razorpayOffer: paymentDetails.offer || null,
+        razorpayExpiry: paymentDetails.expiry || null,
+        razorpayNotes: paymentDetails.notes || null,
+        razorpayMerchant: paymentDetails.merchant || null,
+        razorpaySettlement: paymentDetails.settlement || null,
+        razorpayQrCode: paymentDetails.qr_code || null,
+        razorpayUpiLink: paymentDetails.upi_link || null,
+        razorpayVirtualAddress: paymentDetails.virtual_address || null,
+        razorpayCustomer: paymentDetails.customer || null,
+        razorpayRecurring: paymentDetails.recurring || false,
+        razorpayType: paymentDetails.type || null,
+        orderData: {
+          paymentPlan: orderData.paymentPlan,
+          advancePaid: orderData.advancePaid,
+          remainingAmount: orderData.remainingAmount,
+          remainingPaymentStatus: orderData.remainingPaymentStatus,
+          originalAmount: orderData.originalAmount,
+          discountedAmount: orderData.discountedAmount,
+          discountType: orderData.discountType,
+          discountPercent: orderData.discountPercent,
+          discountApplied: orderData.discountApplied
+        }
+      }
     
     try {
       await order.save()

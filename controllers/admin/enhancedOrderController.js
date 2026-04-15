@@ -38,7 +38,7 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     const sortOptions = {}
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1
     
-    // Fetch orders with payment details
+    // Fetch orders with payment details and customer information
     const orders = await Order.find(query)
       .populate('userId', 'name email mobile')
       .sort(sortOptions)
@@ -61,6 +61,53 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
       { $group: { _id: '$paymentMethod', count: { $sum: 1 } } }
     ])
     
+    // Transform orders to include customer details and shiprocket ID
+    const transformedOrders = orders.map(order => {
+      // Get customer information from guestInfo or userId
+      let customerInfo = {}
+      
+      if (order.guestInfo) {
+        // Guest checkout - use guestInfo
+        customerInfo = {
+          name: `${order.guestInfo.firstName || ''} ${order.guestInfo.lastName || ''}`.trim() || 'Guest User',
+          email: order.guestInfo.email || 'N/A',
+          phone: order.guestInfo.mobile || 'N/A',
+          address: {
+            streetAddress: order.guestInfo.streetAddress || 'N/A',
+            city: order.guestInfo.city || 'N/A',
+            state: order.guestInfo.state || 'N/A',
+            zipCode: order.guestInfo.zipCode || 'N/A'
+          }
+        }
+      } else if (order.userId) {
+        // Registered user - use populated userId
+        customerInfo = {
+          name: order.userId?.name || 'N/A',
+          email: order.userId?.email || 'N/A',
+          phone: order.userId?.mobile || 'N/A',
+          address: order.shippingAddress || {}
+        }
+      } else {
+        // Fallback
+        customerInfo = {
+          name: 'Guest User',
+          email: 'N/A',
+          phone: 'N/A',
+          address: {}
+        }
+      }
+
+      return {
+        ...order,
+        customer: customerInfo,
+        shiprocketOrderId: order.shiprocketOrderId || 'N/A',
+        awbCode: order.awbCode || 'N/A',
+        trackingNumber: order.trackingNumber || 'N/A',
+        trackingUrl: order.trackingUrl || 'N/A',
+        courierName: order.courierName || 'N/A'
+      }
+    })
+
     // Calculate revenue from paid orders only
     const paidOrdersRevenue = await Order.aggregate([
       { $match: { ...query, paymentStatus: 'paid' } },
@@ -88,7 +135,7 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     sendSuccess(res, {
       success: true,
       data: {
-        orders,
+        orders: transformedOrders,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(totalOrders / parseInt(limit)),

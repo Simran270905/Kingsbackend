@@ -1,0 +1,9 @@
+{
+  "code": "TEST50",
+  "discount": 50,
+  "type": "percentage",
+  "maxDiscount": 1000,
+  "minAmount": 500,
+  "description": "Test 50% off coupon",
+  "expiresAt": "2026-12-31T23:59:59.000Z"
+}

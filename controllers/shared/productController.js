@@ -358,27 +358,32 @@ export const updateProduct = catchAsync(async (req, res) => {
   }
 
   // STEP 3: ENSURE VALIDATION RUNS BEFORE UPDATE
-  // Basic validation for required fields
-  if (req.body.name || req.body.description || req.body.category || req.body.images) {
-    const existing = await Product.findById(id).populate('category brand')
-    if (!existing) {
-      return sendError(res, 'Product not found', 404)
-    }
-    
-    const productData = {
-      name: req.body.name || existing.name,
-      description: req.body.description || existing.description,
-      originalPrice: req.body.originalPrice || existing.originalPrice,
-      sellingPrice: req.body.sellingPrice || existing.sellingPrice,
-      purchasePrice: req.body.purchasePrice !== undefined ? req.body.purchasePrice : existing.purchasePrice,
-      category: req.body.category || existing.category,
-      images: req.body.images || existing.images
-    }
-    
+  // Always get existing product for validation
+  const existing = await Product.findById(id).populate('category brand')
+  if (!existing) {
+    return sendError(res, 'Product not found', 404)
+  }
+  
+  // Build complete product data for validation
+  const productData = {
+    name: req.body.name || existing.name,
+    description: req.body.description || existing.description,
+    originalPrice: req.body.originalPrice || existing.originalPrice,
+    sellingPrice: req.body.sellingPrice || existing.sellingPrice,
+    purchasePrice: req.body.purchasePrice !== undefined ? req.body.purchasePrice : existing.purchasePrice,
+    category: req.body.category || existing.category,
+    images: req.body.images || existing.images,
+    stock: req.body.stock !== undefined ? req.body.stock : existing.stock
+  }
+  
+  // Only validate if any of the core fields are being updated
+  const hasCoreFieldUpdates = req.body.name || req.body.description || req.body.category || req.body.images || req.body.originalPrice
+  
+  if (hasCoreFieldUpdates) {
     const validation = validateProduct(productData)
     if (!validation.valid) {
-      console.log("â Validation error:", validation.errors)
-      console.log("â Product data validated:", productData)
+      console.log(" Validation error:", validation.errors)
+      console.log(" Product data validated:", productData)
       
       // Convert array of errors to object format for frontend
       const errorObject = validation.errors.reduce((acc, error) => {
@@ -404,6 +409,13 @@ export const updateProduct = catchAsync(async (req, res) => {
   
   // STEP 6: FINAL UPDATE - Use req.body directly
   try {
+    console.log('🔧 UPDATE DEBUG - Request body:', req.body)
+    console.log('🔧 UPDATE DEBUG - Stock field:', {
+      stockInBody: req.body.stock,
+      stockType: typeof req.body.stock,
+      hasSizes: req.body.hasSizes
+    })
+    
     console.log('About to call Product.findByIdAndUpdate with:', {
       id,
       updateData: req.body,
@@ -413,14 +425,20 @@ export const updateProduct = catchAsync(async (req, res) => {
     const product = await Product.findByIdAndUpdate(
       id,
       req.body,
-      { new: true, runValidators: false }
+      { new: true, runValidators: true }
     )
     
     if (!product) {
       return sendError(res, 'Product not found', 404)
     }
     
-    console.log("â Product updated successfully:", product._id)
+    console.log("✅ Product updated successfully:", {
+      id: product._id,
+      name: product.name,
+      stock: product.stock,
+      hasSizes: product.hasSizes,
+      sizes: product.sizes
+    })
     // Return proper format for frontend sync
     res.status(200).json({
       success: true,

@@ -42,19 +42,19 @@ router.post('/validate', (req, res, next) => {
 })
 
 // Admin only routes
-router.post('/', (req, res, next) => {
+router.post('/', protectAdmin, (req, res, next) => {
   console.log('🔍 DEBUG: POST /coupons (admin) route hit')
-  protectAdmin(req, res, next)
+  createCoupon(req, res, next)
 })
 
-router.put('/:id', (req, res, next) => {
+router.put('/:id', protectAdmin, (req, res, next) => {
   console.log('🔍 DEBUG: PUT /coupons/:id route hit with id:', req.params.id)
-  protectAdmin(req, res, next)
+  updateCoupon(req, res, next)
 })
 
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', protectAdmin, (req, res, next) => {
   console.log('🔍 DEBUG: DELETE /coupons/:id route hit with id:', req.params.id)
-  protectAdmin(req, res, next)
+  deleteCoupon(req, res, next)
 })
 
 console.log('🔧 DEBUG: All coupon routes registered')

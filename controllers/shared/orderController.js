@@ -1,7 +1,7 @@
 import Order from '../../models/Order.js'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
-import { validateOrder } from '../../utils/validation.js'
 import shiprocketService from '../../services/shiprocketService.js'
+import { validateOrder } from '../../utils/validation.js'
 import { processOrderDiscount } from '../../middleware/paymentDiscount.js'
 import { processOrderPayment } from '../../utils/discountCalculator.js'
 
@@ -559,4 +559,183 @@ export const markRemainingPaymentAsPaid = catchAsync(async (req, res) => {
     paymentStatus: order.paymentStatus,
     message: 'Remaining payment marked as paid successfully'
   })
+})
+
+// Update order payment details
+export const updateOrderPayment = catchAsync(async (req, res) => {
+  const { id } = req.params
+  const { 
+    razorpay_order_id, 
+    razorpay_payment_id, 
+    razorpay_signature, 
+    paymentStatus, 
+    paymentMethod, 
+    amountPaid 
+  } = req.body
+
+  if (!id) {
+    return sendError(res, 'Order ID is required', 400)
+  }
+
+  const order = await Order.findById(id)
+  
+  if (!order) {
+    return sendError(res, 'Order not found', 404)
+  }
+
+  // Update payment details
+  if (razorpay_order_id) order.razorpayOrderId = razorpay_order_id
+  if (razorpay_payment_id) order.razorpayPaymentId = razorpay_payment_id
+  if (razorpay_signature) order.razorpaySignature = razorpay_signature
+  if (paymentStatus) order.paymentStatus = paymentStatus
+  if (paymentMethod) order.paymentMethod = paymentMethod
+  if (amountPaid) order.amountPaid = amountPaid
+
+  // Set payment date if status is paid
+  if (paymentStatus === 'paid') {
+    order.paymentDate = new Date()
+    order.paidAt = new Date()
+  }
+
+  await order.save()
+
+  console.log(`Payment updated for order: ${id} | Status: ${paymentStatus}`)
+
+  sendSuccess(res, {
+    orderId: order._id,
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    amountPaid: order.amountPaid,
+    message: 'Payment details updated successfully'
+  })
+})
+
+// Create Shiprocket order
+export const createShiprocketOrder = catchAsync(async (req, res) => {
+  const { id } = req.params
+
+  if (!id) {
+    return sendError(res, 'Order ID is required', 400)
+  }
+
+  const order = await Order.findById(id)
+  
+  if (!order) {
+    return sendError(res, 'Order not found', 404)
+  }
+
+  try {
+    console.log('Creating Shiprocket order for:', order._id)
+    
+    const shipmentData = {
+      order_id: order._id,
+      order_date: order.createdAt,
+      pickup_location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary',
+      channel_id: process.env.SHIPROCKET_CHANNEL_ID,
+      comment: order.notes || '',
+      billing_customer_name: order.customer.firstName,
+      billing_last_name: order.customer.lastName || '',
+      billing_address: order.customer.streetAddress,
+      billing_address_2: '',
+      billing_city: order.customer.city,
+      billing_pincode: order.customer.zipCode,
+      billing_state: order.customer.state,
+      billing_country: 'India',
+      billing_email: order.customer.email,
+      billing_phone: order.customer.mobile,
+      shipping_is_billing: true,
+      shipping_customer_name: order.customer.firstName,
+      shipping_last_name: order.customer.lastName || '',
+      shipping_address: order.customer.streetAddress,
+      shipping_address_2: '',
+      shipping_city: order.customer.city,
+      shipping_pincode: order.customer.zipCode,
+      shipping_state: order.customer.state,
+      shipping_country: 'India',
+      shipping_email: order.customer.email,
+      shipping_phone: order.customer.mobile,
+      order_items: order.items.map(item => ({
+        name: item.name,
+        sku: item.productId || item.id,
+        units: item.quantity,
+        selling_price: item.price,
+        discount: '',
+        tax: '',
+        hsn: ''
+      })),
+      payment_method: order.paymentMethod === 'cod' ? 'COD' : 'Prepaid',
+      shipping_charges: 0,
+      giftwrap_charges: 0,
+      transaction_charges: 0,
+      total_discount: 0,
+      sub_total: order.totalAmount,
+      length: 10,
+      breadth: 10,
+      height: 5,
+      weight: 0.5
+    }
+
+    const shiprocketResult = await shiprocketService.createOrder(shipmentData)
+    
+    if (shiprocketResult.success) {
+      // Update order with shipment details
+      order.shipmentId = shiprocketResult.shipment_id
+      order.trackingNumber = shiprocketResult.awb_code
+      order.trackingUrl = shiprocketResult.tracking_url
+      order.shippingStatus = 'created'
+      order.estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+      
+      await order.save()
+      
+      console.log('Shiprocket order created successfully:', shiprocketResult.shipment_id)
+      
+      sendSuccess(res, {
+        shipmentId: shiprocketResult.shipment_id,
+        trackingNumber: shiprocketResult.awb_code,
+        trackingUrl: shiprocketResult.tracking_url,
+        message: 'Shiprocket order created successfully'
+      })
+    } else {
+      console.error('Shiprocket order creation failed:', shiprocketResult.error)
+      sendError(res, shiprocketResult.error || 'Failed to create Shiprocket order', 500)
+    }
+  } catch (error) {
+    console.error('Error creating Shiprocket order:', error)
+    sendError(res, error.message || 'Failed to create Shiprocket order', 500)
+  }
+})
+
+// Get shipment tracking
+export const getShipmentTracking = catchAsync(async (req, res) => {
+  const { id } = req.params
+
+  if (!id) {
+    return sendError(res, 'Order ID is required', 400)
+  }
+
+  const order = await Order.findById(id)
+  
+  if (!order) {
+    return sendError(res, 'Order not found', 404)
+  }
+
+  if (!order.shipmentId) {
+    return sendError(res, 'Shipment not created yet', 404)
+  }
+
+  try {
+    const trackingResult = await shiprocketService.getTracking(order.shipmentId)
+    
+    sendSuccess(res, {
+      trackingNumber: order.trackingNumber,
+      trackingUrl: order.trackingUrl,
+      shipmentId: order.shipmentId,
+      trackingData: trackingResult,
+      shippingStatus: order.shippingStatus,
+      estimatedDelivery: order.estimatedDelivery
+    })
+  } catch (error) {
+    console.error('Error getting tracking:', error)
+    sendError(res, error.message || 'Failed to get tracking information', 500)
+  }
 })

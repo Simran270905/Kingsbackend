@@ -10,7 +10,10 @@ import {
   getOrderStats,
   trackOrder,
   getRemainingPayment,
-  markRemainingPaymentAsPaid
+  markRemainingPaymentAsPaid,
+  updateOrderPayment,
+  createShiprocketOrder,
+  getShipmentTracking
 } from '../../controllers/shared/orderController.js'
 import {
   markCODOrderAsPaid,
@@ -43,6 +46,13 @@ router.post('/', createOrder)
 router.get('/cod/pending-payment', protectAdmin, getCODOrdersPendingPayment)
 router.get('/cod/payment-stats', protectAdmin, getCODPaymentStats)
 router.post('/cod/mark-multiple-paid', protectAdmin, markMultipleCODAsPaid)
+
+// Payment update routes
+router.patch('/:id/payment', updateOrderPayment)
+
+// Shiprocket integration routes
+router.post('/:id/shiprocket', createShiprocketOrder)
+router.get('/:id/tracking', getShipmentTracking)
 
 // Protected routes (admin only)
 router.get('/', protectAdmin, getOrders)

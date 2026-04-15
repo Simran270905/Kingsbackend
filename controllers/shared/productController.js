@@ -138,6 +138,7 @@ export const getProducts = catchAsync(async (req, res) => {
   
   const skip = (parseInt(page) - 1) * parseInt(limit)
   const products = await Product.find(query)
+    .populate('category', 'name slug')
     .skip(skip)
     .limit(parseInt(limit))
     .sort({ createdAt: -1 })

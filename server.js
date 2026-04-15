@@ -243,15 +243,55 @@ app.use((req, res) => {
 // Global error handler
 app.use((err, req, res, next) => {
   const isDev = process.env.NODE_ENV !== 'production'
+
+  // Handle Mongoose Validation Errors
+  if (err.name === 'ValidationError') {
+    const errors = Object.keys(err.errors).reduce((acc, key) => {
+      acc[key] = err.errors[key].message
+      return acc
+    }, {})
+    
+    console.error(`[VALIDATION_ERROR] ${req.method} ${req.path}:`, errors)
+    return res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors
+    })
+  }
+
+  // Handle Mongoose Cast Errors (invalid ObjectID)
+  if (err.name === 'CastError') {
+    console.error(`[CAST_ERROR] ${req.method} ${req.path}: Invalid ${err.path}: ${err.value}`)
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid ID format'
+    })
+  }
+
+  // Handle duplicate key errors
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0]
+    console.error(`[DUPLICATE_ERROR] ${req.method} ${req.path}: Duplicate ${field}`)
+    return res.status(422).json({
+      success: false,
+      message: `${field} already exists`,
+      errors: {
+        [field]: `${field} already exists`
+      }
+    })
+  }
+
+  // Handle other errors
   const status = err.status || err.statusCode || 500
+  const message = err.message || 'Internal server error'
 
   if (status >= 500) {
-    console.error(`❌ [${new Date().toISOString()}] ${req.method} ${req.path} - ${err.message}`)
+    console.error(`[SERVER_ERROR] ${new Date().toISOString()} ${req.method} ${req.path}:`, message)
   }
 
   res.status(status).json({
     success: false,
-    message: isDev ? err.message : (status < 500 ? err.message : 'Internal server error'),
+    message: isDev || status < 500 ? message : 'Internal server error',
     ...(isDev && status >= 500 && { stack: err.stack })
   })
 })

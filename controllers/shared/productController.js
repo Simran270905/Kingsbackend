@@ -239,24 +239,53 @@ export const createProduct = catchAsync(async (req, res) => {
   const validation = validateProduct({ 
     name, 
     description, 
+    originalPrice: parsedOriginalPrice,
     price: finalSellingPrice, 
     category, 
     images 
   })
   if (!validation.valid) {
-    return sendError(res, 'Validation failed', 400, validation.errors)
+    // Convert array of errors to object format for frontend
+    const errorObject = validation.errors.reduce((acc, error) => {
+      // Extract field name from error message
+      if (error.includes('name')) acc.name = error
+      else if (error.includes('description')) acc.description = error
+      else if (error.includes('price') || error.includes('MRP')) acc.originalPrice = error
+      else if (error.includes('category')) acc.category = error
+      else if (error.includes('images')) acc.images = error
+      else acc.general = error
+      return acc
+    }, {})
+    
+    return res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errorObject
+    })
   }
 
   // Validate pricing logic: selling price should never be greater than original price
   if (finalSellingPrice > parsedOriginalPrice) {
-    return sendError(res, 'Selling price cannot be greater than MRP (original price)', 400)
+    return res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors: {
+        sellingPrice: 'Selling price cannot be greater than MRP (original price)'
+      }
+    })
   }
   
   // Check for duplicate SKU
   if (sku) {
     const existing = await Product.findOne({ sku })
     if (existing) {
-      return sendError(res, 'Product with this SKU already exists', 400)
+      return res.status(422).json({
+        success: false,
+        message: 'Validation failed',
+        errors: {
+          sku: 'Product with this SKU already exists'
+        }
+      })
     }
   }
   
@@ -279,20 +308,25 @@ export const createProduct = catchAsync(async (req, res) => {
     isBestSeller: isBestSeller || false,
     isOnSale: isOnSale || false,
     discountPercentage: discountPercentage || 0,
-    isActive: true // ✅ FIXED: Ensure new products are active by default
+    isActive: true // FIXED: Ensure new products are active by default
   })
   
   await product.save()
   
-  // ✅ DEBUG LOG: Verify prices are saved correctly
-  console.log('✅ Product saved:', { 
+  // DEBUG LOG: Verify prices are saved correctly
+  console.log(' Product saved:', { 
     name: product.name, 
     purchasePrice: product.purchasePrice,
     originalPrice: product.originalPrice, 
     sellingPrice: product.sellingPrice 
   })
   
-  sendSuccess(res, product, 201, 'Product created successfully')
+  // Return proper format for frontend sync
+  res.status(201).json({
+    success: true,
+    message: 'Product created successfully',
+    data: product
+  })
 })
 
 // UPDATE product
@@ -348,7 +382,23 @@ export const updateProduct = catchAsync(async (req, res) => {
     if (!validation.valid) {
       console.log("â Validation error:", validation.errors)
       console.log("â Product data validated:", productData)
-      return sendError(res, 'Validation failed', 400, validation.errors)
+      
+      // Convert array of errors to object format for frontend
+      const errorObject = validation.errors.reduce((acc, error) => {
+        if (error.includes('name')) acc.name = error
+        else if (error.includes('description')) acc.description = error
+        else if (error.includes('price') || error.includes('MRP')) acc.originalPrice = error
+        else if (error.includes('category')) acc.category = error
+        else if (error.includes('images')) acc.images = error
+        else acc.general = error
+        return acc
+      }, {})
+      
+      return res.status(422).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errorObject
+      })
     }
   }
   
@@ -365,7 +415,12 @@ export const updateProduct = catchAsync(async (req, res) => {
     }
     
     console.log("â Product updated successfully:", product._id)
-    sendSuccess(res, product, 200, 'Product updated successfully')
+    // Return proper format for frontend sync
+    res.status(200).json({
+      success: true,
+      message: 'Product updated successfully',
+      data: product
+    })
   } catch (error) {
     console.log("â Update error:", error.message)
     console.log("â Error details:", error)

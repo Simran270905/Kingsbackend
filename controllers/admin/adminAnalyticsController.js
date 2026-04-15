@@ -1,4 +1,5 @@
 import Order from '../../models/Order.js'
+import Payment from '../../models/Payment.js'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
 /**

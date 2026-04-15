@@ -194,19 +194,25 @@ export const createOrder = catchAsync(async (req, res) => {
 
   // Create order with payment details
   const order = new Order({
-    // userId: // Optional - not required for guest checkout
+    userId: req.user?.userId || null, // Optional - for logged-in users only
     items: transformedItems,
-    // Use customer data from request body for guest checkout
-    customer: {
-      firstName: orderData.firstName || shippingAddress?.firstName || '',
-      lastName: orderData.lastName || shippingAddress?.lastName || '',
-      email: orderData.email || shippingAddress?.email || '',
-      mobile: orderData.mobile || shippingAddress?.mobile || '',
-      streetAddress: orderData.streetAddress || shippingAddress?.streetAddress || '',
-      city: orderData.city || shippingAddress?.city || '',
-      state: orderData.state || shippingAddress?.state || '',
-      zipCode: orderData.zipCode || shippingAddress?.zipCode || ''
-    },
+    // 🔥 PHASE 1: UPDATE ORDER SCHEMA - Support both user and guest
+    ...(req.user?.userId ? {
+      // Logged-in user
+      customer: req.user.userId
+    } : {
+      // Guest checkout
+      guestInfo: {
+        firstName: orderData.firstName || '',
+        lastName: orderData.lastName || '',
+        email: orderData.email || '',
+        mobile: orderData.mobile || '',
+        streetAddress: orderData.streetAddress || '',
+        city: orderData.city || '',
+        state: orderData.state || '',
+        zipCode: orderData.zipCode || ''
+      }
+    }),
     subtotal: subtotal || originalAmount,
     tax,
     shippingCost,
@@ -454,14 +460,16 @@ export const trackOrder = catchAsync(async (req, res) => {
   
   console.log(`📍 Order tracking requested: ${orderId} | Status: ${order.status}`)
   
-  // Return only safe tracking information
+  // Return only safe tracking information with proper customer/guest handling
+  const customerInfo = order.customer || order.guestInfo || {}
+  
   sendSuccess(res, {
     orderId: order._id,
     status: order.status,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
-    shippingAddress: order.shippingAddress,
-    items: order.items.map(item => ({
+    shippingAddress: customerInfo,
+    items: order.items.map(item =>({
       name: item.name,
       quantity: item.quantity,
       image: item.image

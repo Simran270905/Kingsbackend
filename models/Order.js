@@ -60,43 +60,11 @@ const orderSchema = new mongoose.Schema(
   {
         items: [orderItemSchema],
     customer: {
-      firstName: {
-        type: String,
-        required: false
-      },
-      lastName: {
-        type: String,
-        required: false
-      },
-      email: {
-        type: String,
-        required: false,
-        match: /.+@.+\..+/
-      },
-      mobile: {
-        type: String,
-        required: false,
-        match: /^[0-9]{10}$/
-      },
-      streetAddress: {
-        type: String,
-        required: false
-      },
-      city: {
-        type: String,
-        required: false
-      },
-      state: {
-        type: String,
-        required: false
-      },
-      zipCode: {
-        type: String,
-        required: false,
-        match: /^[0-9]{6}$/
-      }
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Customer',
+      required: false
     },
-    shippingAddress: {
+    guestInfo: {
       firstName: {
         type: String,
         required: false

@@ -55,10 +55,28 @@ export const getAdminAnalytics = catchAsync(async (req, res) => {
   const avgOrderValue = totalPaidOrders > 0 ? totalRevenue / totalPaidOrders : 0
   const totalProductsSold = paidOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0)
   
-  // Customer analytics
-  const uniqueCustomers = new Set(paidOrders.map(o => o.customer?.email || o.shippingAddress?.email).filter(Boolean))
+  // 🔥 PHASE 4: FIX BACKEND AGGREGATION - Include guest customers
+  // Customer analytics (including guests)
+  const uniqueCustomers = new Set()
   const repeatCustomers = new Set()
   const customerOrders = new Map()
+  
+  paidOrders.forEach(order => {
+    // 🔥 PHASE 4: Include both user and guest in customer count
+    const customerEmail = order.customer?.email || order.guestInfo?.email
+    const customerPhone = order.customer?.phone || order.guestInfo?.mobile
+    
+    if (customerEmail) {
+      // Registered user
+      uniqueCustomers.add(customerEmail)
+      customerOrders.set(customerEmail, (customerOrders.get(customerEmail) || 0) + 1)
+    } else if (order.guestInfo?.email) {
+      // Guest user - count by email
+      const guestIdentifier = `guest_${order.guestInfo.email}`
+      uniqueCustomers.add(guestIdentifier)
+      customerOrders.set(guestIdentifier, (customerOrders.get(guestIdentifier) || 0) + 1)
+    }
+  })
   
   paidOrders.forEach(order => {
     const email = order.customer?.email || order.shippingAddress?.email

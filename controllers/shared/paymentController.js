@@ -309,6 +309,144 @@ export const handlePaymentWebhook = catchAsync(async (req, res) => {
   }
 })
 
+// Get order details for payment confirmation
+export const getOrderDetails = catchAsync(async (req, res) => {
+  const { orderId } = req.params
+  
+  try {
+    const order = await Order.findById(orderId)
+      .populate('paymentId', 'razorpayPaymentId status createdAt')
+    
+    if (!order) {
+      return sendError(res, 'Order not found', 404)
+    }
+    
+    sendSuccess(res, { order }, 200, 'Order details retrieved successfully')
+  } catch (error) {
+    console.error('Error fetching order details:', error)
+    sendError(res, 'Failed to fetch order details', 500)
+  }
+})
+
+// Get shipment status for order
+export const getShipmentStatus = catchAsync(async (req, res) => {
+  const { orderId } = req.params
+  
+  try {
+    const order = await Order.findById(orderId)
+      .select('shipmentId trackingNumber trackingUrl shippingStatus estimatedDelivery')
+    
+    if (!order) {
+      return sendError(res, 'Order not found', 404)
+    }
+    
+    // If shipment exists, return shipment details
+    if (order.shipmentId) {
+      sendSuccess(res, {
+        shipmentId: order.shipmentId,
+        trackingNumber: order.trackingNumber,
+        trackingUrl: order.trackingUrl,
+        status: order.shippingStatus,
+        estimatedDelivery: order.estimatedDelivery
+      }, 200, 'Shipment status retrieved successfully')
+    } else {
+      // No shipment created yet
+      sendSuccess(res, {
+        status: 'not_created',
+        message: 'Shipment will be created soon'
+      }, 200, 'Shipment not yet created')
+    }
+  } catch (error) {
+    console.error('Error fetching shipment status:', error)
+    sendError(res, 'Failed to fetch shipment status', 500)
+  }
+})
+
+// Create Shiprocket shipment for order
+export const createShiprocketShipment = catchAsync(async (req, res) => {
+  const { orderId } = req.params
+  
+  try {
+    const order = await Order.findById(orderId)
+    
+    if (!order) {
+      return sendError(res, 'Order not found', 404)
+    }
+    
+    // Check if shipment already exists
+    if (order.shipmentId) {
+      return sendError(res, 'Shipment already created for this order', 400)
+    }
+    
+    // Create shipment data for Shiprocket
+    const shipmentData = {
+      _id: order._id,
+      items: order.items,
+      shippingAddress: {
+        ...order.customer,
+        email: order.customer.email
+      },
+      paymentMethod: order.paymentMethod || 'razorpay',
+      subtotal: order.totalAmount,
+      totalAmount: order.totalAmount,
+      notes: order.notes
+    }
+    
+    // Import shiprocket service
+    const shiprocketService = (await import('../../services/shiprocketService.js')).default
+    
+    const shipmentResult = await shiprocketService.createOrder(shipmentData)
+    
+    if (shipmentResult.status === 'created') {
+      // Update order with shipment details
+      await Order.findByIdAndUpdate(orderId, {
+        shipmentId: shipmentResult.shipmentId,
+        trackingUrl: shipmentResult.trackingUrl,
+        shippingStatus: 'created',
+        estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+      })
+      
+      // Try to get AWB number
+      try {
+        const awbResult = await shiprocketService.getAWBNumber(shipmentResult.shipmentId)
+        if (awbResult.success) {
+          await Order.findByIdAndUpdate(orderId, {
+            trackingNumber: awbResult.awbNumber
+          })
+        }
+      } catch (awbError) {
+        console.log('AWB number retrieval failed (will retry later):', awbError.message)
+      }
+      
+      sendSuccess(res, {
+        shipmentId: shipmentResult.shipmentId,
+        trackingUrl: shipmentResult.trackingUrl,
+        trackingNumber: shipmentResult.awbNumber || null,
+        status: 'created',
+        message: 'Shipment created successfully on Shiprocket'
+      }, 201, 'Shipment created successfully')
+    } else {
+      // Update order with failed status
+      await Order.findByIdAndUpdate(orderId, {
+        shippingStatus: 'failed',
+        notes: `Shipment failed: ${shipmentResult.error}`
+      })
+      
+      sendError(res, `Shipment creation failed: ${shipmentResult.error}`, 400)
+    }
+  } catch (error) {
+    console.error('Error creating Shiprocket shipment:', error)
+    
+    // Update order with failed status
+    await Order.findByIdAndUpdate(orderId, {
+      shippingStatus: 'failed',
+      notes: `Shipment error: ${error.message}`
+    })
+    
+    sendError(res, error.message || 'Failed to create shipment', 500)
+  }
+})
+
 // Get payment history (guest checkout - returns all payments or filter by customer email if available)
 export const getPaymentHistory = catchAsync(async (req, res) => {
   // For guest checkout, return all payments or implement customer-based filtering

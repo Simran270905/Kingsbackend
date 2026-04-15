@@ -74,6 +74,7 @@ export const createRazorpayOrder = catchAsync(async (req, res) => {
 // Verify Payment and Create Order
 export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
   console.log('💳 Processing payment verification and order creation...')
+  console.log('🔍 Request body:', JSON.stringify(req.body, null, 2))
   
   const {
     razorpayOrderId,
@@ -104,6 +105,14 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
   }
   
   // Validation
+  console.log('🔍 Validating payment credentials:')
+  console.log('- razorpayOrderId:', razorpayOrderId)
+  console.log('- razorpayPaymentId:', razorpayPaymentId)
+  console.log('- razorpaySignature:', razorpaySignature ? 'Present' : 'Missing')
+  console.log('- customer:', customer ? 'Present' : 'Missing')
+  console.log('- cartItems:', cartItems ? `${cartItems.length} items` : 'Missing')
+  console.log('- totalAmount:', totalAmount)
+  
   if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
     console.log('❌ Missing payment credentials')
     return sendError(res, 'Payment credentials are required', 400)
@@ -116,14 +125,24 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
   
   try {
     console.log(`🔐 Verifying payment signature for order: ${razorpayOrderId}`)
+    console.log('🔑 Razorpay Secret available:', !!process.env.RAZORPAY_KEY_SECRET)
     
     // Verify signature
     const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
     hmac.update(razorpayOrderId + '|' + razorpayPaymentId)
     const generated_signature = hmac.digest('hex')
     
+    console.log('🔍 Generated signature:', generated_signature)
+    console.log('🔍 Received signature:', razorpaySignature)
+    console.log('🔍 Signatures match:', generated_signature === razorpaySignature)
+    
     if (generated_signature !== razorpaySignature) {
       console.log('❌ Payment signature verification failed')
+      console.log('❌ Possible causes:')
+      console.log('  - Invalid Razorpay secret')
+      console.log('  - Tampered payment data')
+      console.log('  - Network interference')
+      
       // Update payment as failed
       await Payment.findOneAndUpdate(
         { razorpayOrderId },
@@ -139,17 +158,40 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
     console.log('✅ Payment signature verified successfully')
     
     // Fetch payment details from Razorpay to verify
+    console.log('🔍 Fetching payment details from Razorpay...')
+    
     const razorpayInstance = getRazorpayInstance()
+    console.log('🔑 Razorpay instance available:', !!razorpayInstance)
+    
+    if (!razorpayInstance) {
+      console.log('❌ Razorpay instance not available')
+      return sendError(res, 'Payment service not available. Please contact support.', 503)
+    }
+    
     const paymentDetails = await razorpayInstance.payments.fetch(razorpayPaymentId)
+    console.log('🔍 Razorpay payment details:', {
+      id: paymentDetails.id,
+      status: paymentDetails.status,
+      amount: paymentDetails.amount,
+      currency: paymentDetails.currency,
+      captured: paymentDetails.captured
+      method: paymentDetails.method,
+      created_at: paymentDetails.created_at
+    })
     
     if (paymentDetails.status !== 'captured') {
       console.log(`❌ Payment not captured. Status: ${paymentDetails.status}`)
-      return sendError(res, 'Payment was not captured by Razorpay', 400)
+      console.log('❌ Possible causes:')
+      console.log('  - Payment failed at Razorpay')
+      console.log('  - Payment was cancelled')
+      console.log('  - Invalid payment ID')
+      return sendError(res, `Payment was not captured by Razorpay. Status: ${paymentDetails.status}`, 400)
     }
     
     console.log(`💰 Payment captured successfully. Amount: ₹${paymentDetails.amount / 100}`)
     
     // Transform cart items to match order schema
+    console.log('🛒 Creating order with transformed items...')
     const transformedItems = cartItems.map(item => ({
       productId: item.id || item.productId,
       name: item.name || item.title,
@@ -159,6 +201,8 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
       image: item.image || null,
       subtotal: item.subtotal || (item.price * item.quantity)
     }))
+    
+    console.log('📦 Transformed items:', transformedItems.length, 'items')
     
     // Create order with correct field names
     const order = new Order({
@@ -202,8 +246,20 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
       notes: 'Payment successful via Razorpay. Transaction ID: ' + razorpayPaymentId
     })
     
-    await order.save()
-    console.log(`✅ Order created successfully: ${order._id}`)
+    try {
+      await order.save()
+      console.log(`✅ Order created successfully: ${order._id}`)
+      console.log('📊 Order details:', {
+        id: order._id,
+        itemsCount: order.items.length,
+        totalAmount: order.totalAmount,
+        customerEmail: order.customer.email,
+        paymentMethod: order.paymentMethod
+      })
+    } catch (orderError) {
+      console.error('❌ Order creation failed:', orderError)
+      throw orderError
+    }
     
     // Create shipment with Shiprocket (async, don't block order creation)
     createShipment(order).catch(error => {

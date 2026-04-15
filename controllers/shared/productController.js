@@ -191,6 +191,7 @@ export const getRecentProducts = catchAsync(async (req, res) => {
   
   try {
     const products = await Product.find()
+      .populate('category', 'name slug')
       .limit(parseInt(limit))
       .sort({ createdAt: -1 })
       .maxTimeMS(5000)

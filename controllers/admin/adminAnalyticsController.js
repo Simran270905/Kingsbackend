@@ -159,7 +159,6 @@ export const getAdminAnalytics = catchAsync(async (req, res) => {
   
   // Recent orders
   const recentOrders = await Order.find({})
-    .populate('userId', 'name email')
     .sort({ createdAt: -1 })
     .limit(20)
     .lean()

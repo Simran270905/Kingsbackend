@@ -103,6 +103,7 @@ export const getAllProductsDebug = catchAsync(async (req, res) => {
 
 // GET all products with filters
 export const getProducts = catchAsync(async (req, res) => {
+  console.log("✅ Products API HIT")
   const { category, search, page = 1, limit = 100, bestSeller, onSale } = req.query
   
   // ✅ FIXED: Include products without isActive field and treat null/undefined as active
@@ -298,6 +299,8 @@ export const updateProduct = catchAsync(async (req, res) => {
   const { id } = req.params
   const updates = req.body
 
+  console.log("ð Incoming body:", req.body)
+
   // ✅ FIXED: Handle both camelCase and snake_case for sellingPrice
   if (updates.sellingPrice || updates.selling_price) {
     updates.sellingPrice = updates.sellingPrice || updates.selling_price
@@ -324,7 +327,7 @@ export const updateProduct = catchAsync(async (req, res) => {
 
   // Validate product data if provided
   if (updates.name || updates.description || updates.sellingPrice || updates.category || updates.images) {
-    const existing = await Product.findById(id)
+    const existing = await Product.findById(id).populate('category brand')
     if (!existing) {
       return sendError(res, 'Product not found', 404)
     }
@@ -332,6 +335,7 @@ export const updateProduct = catchAsync(async (req, res) => {
     const productData = {
       name: updates.name || existing.name,
       description: updates.description || existing.description,
+      originalPrice: updates.originalPrice || updates.price || existing.originalPrice,
       sellingPrice: updates.sellingPrice || existing.sellingPrice,
       category: updates.category || existing.category,
       images: updates.images || existing.images
@@ -339,6 +343,8 @@ export const updateProduct = catchAsync(async (req, res) => {
     
     const validation = validateProduct(productData)
     if (!validation.valid) {
+      console.log("â Validation error:", validation.errors)
+      console.log("â Product data validated:", productData)
       return sendError(res, 'Validation failed', 400, validation.errors)
     }
 
@@ -356,17 +362,24 @@ export const updateProduct = catchAsync(async (req, res) => {
     }
   }
   
-  const product = await Product.findByIdAndUpdate(
-    id,
-    updates,
-    { new: true, runValidators: true }
-  )
-  
-  if (!product) {
-    return sendError(res, 'Product not found', 404)
+  try {
+    const product = await Product.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true, runValidators: true }
+    )
+    
+    if (!product) {
+      return sendError(res, 'Product not found', 404)
+    }
+    
+    console.log("â Product updated successfully:", product._id)
+    sendSuccess(res, product, 200, 'Product updated successfully')
+  } catch (error) {
+    console.log("â Update error:", error.message)
+    console.log("â Error details:", error)
+    return sendError(res, error.message || 'Failed to update product', 500)
   }
-  
-  sendSuccess(res, product, 200, 'Product updated successfully')
 })
 
 // DELETE product

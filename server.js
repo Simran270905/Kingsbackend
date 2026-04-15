@@ -268,8 +268,12 @@ const connectDB = async () => {
     // MongoDB connection options
     const options = {
       maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
+      socketTimeoutMS: 60000, // Close sockets after 60 seconds of inactivity
+      connectTimeoutMS: 10000, // Time to establish initial connection
+      heartbeatFrequencyMS: 10000, // Frequency of heartbeat checks
+      retryWrites: true, // Retry write operations
+      retryReads: true, // Retry read operations
     }
 
     const conn = await mongoose.connect(uri, options)

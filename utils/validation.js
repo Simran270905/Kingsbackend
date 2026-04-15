@@ -2,6 +2,8 @@
  * Input validation utilities
  */
 
+import mongoose from 'mongoose'
+
 export const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return re.test(email)
@@ -16,11 +18,11 @@ export const validateProduct = (product) => {
   if (!product.description || product.description.trim().length === 0) {
     errors.push('Product description is required')
   }
-  if (!product.price || product.price < 0) {
-    errors.push('Product price is required and must be positive')
+  if (!product.originalPrice || product.originalPrice < 0) {
+    errors.push('Product original price (MRP) is required and must be positive')
   }
-  if (!product.category || product.category.trim().length === 0) {
-    errors.push('Product category is required')
+  if (!product.category || !mongoose.Types.ObjectId.isValid(product.category)) {
+    errors.push('Valid category ID is required')
   }
   if (product.images && (!Array.isArray(product.images) || product.images.length > 4)) {
     errors.push('Product can have maximum 4 images')

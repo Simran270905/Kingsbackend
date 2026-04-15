@@ -59,13 +59,13 @@ const productSchema = new mongoose.Schema(
       }
     },
     category: {
-      type: String,
-      required: [true, 'Category is required'],
-      trim: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      required: [true, 'Category is required']
     },
     brand: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Brand',
       default: null
     },
     images: {

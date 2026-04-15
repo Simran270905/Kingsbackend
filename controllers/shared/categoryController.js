@@ -4,7 +4,11 @@ import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 
 // GET all active categories (public)
 export const getCategories = catchAsync(async (req, res) => {
-  const categories = await Category.find({ isActive: true }).sort({ sortOrder: 1, name: 1 })
+  console.log("Categories API HIT")
+  const startTime = Date.now()
+  const categories = await Category.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).maxTimeMS(5000)
+  const endTime = Date.now()
+  console.log(`Categories API response time: ${endTime - startTime}ms`)
   sendSuccess(res, { categories })
 })
 

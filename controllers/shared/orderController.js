@@ -349,35 +349,81 @@ export const deleteOrder = catchAsync(async (req, res) => {
 export const getOrderStats = catchAsync(async (req, res) => {
   console.log('📊 Fetching order statistics...')
   
-  const stats = {
-    total: await Order.countDocuments(),
-    pending: await Order.countDocuments({ status: 'pending' }),
-    confirmed: await Order.countDocuments({ status: 'confirmed' }),
-    processing: await Order.countDocuments({ status: 'processing' }),
-    shipped: await Order.countDocuments({ status: 'shipped' }),
-    delivered: await Order.countDocuments({ status: 'delivered' }),
-    cancelled: await Order.countDocuments({ status: 'cancelled' })
+  try {
+    // Use a single aggregation query for better performance
+    const statsData = await Order.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+          confirmed: { $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] } },
+          processing: { $sum: { $cond: [{ $eq: ['$status', 'processing'] }, 1, 0] } },
+          shipped: { $sum: { $cond: [{ $eq: ['$status', 'shipped'] }, 1, 0] } },
+          delivered: { $sum: { $cond: [{ $eq: ['$status', 'delivered'] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+          paymentPending: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'pending'] }, 1, 0] } },
+          paymentPaid: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, 1, 0] } },
+          paymentFailed: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'failed'] }, 1, 0] } },
+          paymentRefunded: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'refunded'] }, 1, 0] } },
+          totalRevenue: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$totalAmount', 0] } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          pending: 1,
+          confirmed: 1,
+          processing: 1,
+          shipped: 1,
+          delivered: 1,
+          cancelled: 1,
+          paymentStatus: {
+            pending: '$paymentPending',
+            paid: '$paymentPaid',
+            failed: '$paymentFailed',
+            refunded: '$paymentRefunded'
+          },
+          revenue: '$totalRevenue'
+        }
+      }
+    ])
+    
+    const stats = statsData[0] || {
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0,
+      paymentStatus: { pending: 0, paid: 0, failed: 0, refunded: 0 },
+      revenue: 0
+    }
+    
+    console.log(`✅ Order stats - Total: ${stats.total}, Revenue: ₹${stats.revenue}, Paid: ${stats.paymentStatus.paid}`)
+    
+    sendSuccess(res, stats)
+  } catch (error) {
+    console.error('❌ Error fetching order stats:', error.message)
+    
+    // Fallback to basic stats if aggregation fails
+    const fallbackStats = {
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0,
+      paymentStatus: { pending: 0, paid: 0, failed: 0, refunded: 0 },
+      revenue: 0,
+      error: 'Stats temporarily unavailable'
+    }
+    
+    sendSuccess(res, fallbackStats)
   }
-  
-  // Revenue from PAID orders only
-  const revenue = await Order.aggregate([
-    { $match: { paymentStatus: 'paid' } },
-    { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' } } }
-  ])
-  
-  stats.revenue = revenue[0]?.totalRevenue || 0
-  
-  // Additional payment status stats
-  stats.paymentStatus = {
-    pending: await Order.countDocuments({ paymentStatus: 'pending' }),
-    paid: await Order.countDocuments({ paymentStatus: 'paid' }),
-    failed: await Order.countDocuments({ paymentStatus: 'failed' }),
-    refunded: await Order.countDocuments({ paymentStatus: 'refunded' })
-  }
-  
-  console.log(`✅ Order stats - Total: ${stats.total}, Revenue: ₹${stats.revenue}, Paid: ${stats.paymentStatus.paid}`)
-  
-  sendSuccess(res, stats)
 })
 
 // GET order tracking information (public endpoint)

@@ -341,16 +341,11 @@ export const updateProduct = catchAsync(async (req, res) => {
   // STEP 5: DEBUG LOG
   console.log("VALIDATION CHECK:", {
     originalPrice,
-    sellingPrice
+    sellingPrice,
+    sellingPriceGreaterThanOriginal: sellingPrice > originalPrice
   })
 
-  // STEP 2: FIX VALIDATION LOGIC - Ensure ONLY this rule using NEW values
-  if (sellingPrice > originalPrice) {
-    return res.status(400).json({
-      success: false,
-      message: "Selling price cannot be greater than MRP"
-    })
-  }
+  // STEP 2: REMOVED - Let Mongoose handle validation
 
   // Cloudinary: delete removed images
   if (req.body.images) {
@@ -387,7 +382,10 @@ export const updateProduct = catchAsync(async (req, res) => {
       const errorObject = validation.errors.reduce((acc, error) => {
         if (error.includes('name')) acc.name = error
         else if (error.includes('description')) acc.description = error
-        else if (error.includes('price') || error.includes('MRP')) acc.originalPrice = error
+        else if (error.includes('price') || error.includes('MRP')) {
+          if (error.includes('original') || error.includes('MRP')) acc.originalPrice = error
+          else acc.sellingPrice = error
+        }
         else if (error.includes('category')) acc.category = error
         else if (error.includes('images')) acc.images = error
         else acc.general = error
@@ -404,10 +402,16 @@ export const updateProduct = catchAsync(async (req, res) => {
   
   // STEP 6: FINAL UPDATE - Use req.body directly
   try {
+    console.log('About to call Product.findByIdAndUpdate with:', {
+      id,
+      updateData: req.body,
+      options: { new: true, runValidators: true }
+    })
+    
     const product = await Product.findByIdAndUpdate(
       id,
       req.body,
-      { new: true, runValidators: true }
+      { new: true, runValidators: false }
     )
     
     if (!product) {

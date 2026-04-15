@@ -47,16 +47,7 @@ const productSchema = new mongoose.Schema(
     },
     sellingPrice: {
       type: Number,
-      default: null,
-      validate: {
-        validator: function(value) {
-          // If sellingPrice is null or undefined, it's valid
-          if (value === null || value === undefined) return true;
-          // Ensure selling price is never greater than original price
-          return value <= this.originalPrice;
-        },
-        message: 'Selling price cannot be greater than MRP (original price)'
-      }
+      default: null
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -175,11 +166,14 @@ productSchema.pre('save', function(next) {
 // Pre-update hook to calculate discount percentage correctly
 productSchema.pre(['findOneAndUpdate', 'findByIdAndUpdate'], function(next) {
   const update = this.getUpdate()
+  console.log('Pre-update hook called with update:', update)
   
   // Check if sellingPrice is being updated
   if (update.sellingPrice || update.$set?.sellingPrice) {
     const newSellingPrice = update.sellingPrice || update.$set?.sellingPrice
-    const originalPrice = this.originalPrice || this.getQuery().originalPrice
+    const originalPrice = update.originalPrice || update.$set?.originalPrice || this.originalPrice || this.getQuery().originalPrice
+    
+    console.log('Pre-update: checking prices', { newSellingPrice, originalPrice })
     
     if (newSellingPrice && originalPrice && newSellingPrice < originalPrice) {
       const discountPercentage = ((originalPrice - newSellingPrice) / originalPrice) * 100

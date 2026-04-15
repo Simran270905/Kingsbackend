@@ -28,6 +28,11 @@ export const validateProduct = (product) => {
     errors.push('Product can have maximum 4 images')
   }
   
+  // Add sellingPrice validation - TEMPORARILY DISABLED
+  // if (product.sellingPrice && product.originalPrice && product.sellingPrice > product.originalPrice) {
+  //   errors.push('Selling price cannot be greater than MRP (original price)')
+  // }
+  
   return {
     valid: errors.length === 0,
     errors

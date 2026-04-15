@@ -27,8 +27,11 @@ export const catchAsync = (fn) => {
       
       // Mongoose validation error
       if (error.name === 'ValidationError') {
-        const messages = Object.values(error.errors).map(err => err.message)
-        return sendError(res, 'Validation failed', 400, messages)
+        const errors = Object.keys(error.errors).reduce((acc, key) => {
+          acc[key] = error.errors[key].message
+          return acc
+        }, {})
+        return sendError(res, 'Validation failed', 422, errors)
       }
       
       // Mongoose duplicate key error

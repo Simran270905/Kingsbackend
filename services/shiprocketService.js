@@ -2,10 +2,14 @@ import axios from 'axios'
 
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1'
 
+// Global token cache to prevent repeated login attempts
+let shiprocketToken = null
+let tokenExpiry = null
+let lastLoginAttempt = 0
+
 class ShiprocketService {
   constructor() {
-    this.token = null
-    this.tokenExpiry = null
+    // Use global cache instead of instance variables
   }
 
   validateConfig() {
@@ -14,29 +18,64 @@ class ShiprocketService {
     }
   }
 
+  // Rate limiting guard to prevent repeated login attempts
+  safeLoginGuard = () => {
+    const now = Date.now()
+    if (now - lastLoginAttempt < 10000) { // 10 second cooldown
+      throw new Error('Shiprocket login blocked: Too many attempts. Please wait.')
+    }
+    lastLoginAttempt = now
+  }
+
+  // Safe token management with caching
+  getShiprocketToken = async () => {
+    // Use cached token if valid
+    if (shiprocketToken && Date.now() < tokenExpiry) {
+      console.log('Using cached Shiprocket token')
+      return shiprocketToken
+    }
+
+    // Rate limiting protection
+    this.safeLoginGuard()
+
+    try {
+      console.log('Authenticating with Shiprocket API...')
+      const response = await axios.post(
+        `${SHIPROCKET_BASE_URL}/external/auth/login`,
+        {
+          email: process.env.SHIPROCKET_API_EMAIL,
+          password: process.env.SHIPROCKET_API_PASSWORD,
+        },
+        {
+          timeout: 15000 // 15 second timeout
+        }
+      )
+
+      if (!response.data || !response.data.token) {
+        console.error('Shiprocket authentication failed: Invalid credentials')
+        throw new Error('Shiprocket authentication failed: Invalid credentials')
+      }
+
+      // Cache the token globally
+      shiprocketToken = response.data.token
+      // Token valid for 240 hours (10 days)
+      tokenExpiry = Date.now() + (240 * 60 * 60 * 1000)
+      
+      console.log('Shiprocket authentication successful')
+      console.log('Token expires in:', new Date(tokenExpiry))
+      return shiprocketToken
+
+    } catch (error) {
+      console.error('Shiprocket login failed:', error.response?.data?.message || error.message)
+      
+      // DO NOT RETRY - Fail fast to prevent account blocking
+      throw new Error('Shiprocket authentication failed')
+    }
+  }
+
   async authenticate() {
     this.validateConfig()
-    
-    // Use External API authentication directly (main account is locked)
-    console.log('Using External API authentication...')
-    
-    // Use External API authentication with API User credentials
-    const response = await axios.post(`${SHIPROCKET_BASE_URL}/external/auth/login`, {
-      email: process.env.SHIPROCKET_API_EMAIL,
-      password: process.env.SHIPROCKET_API_PASSWORD
-    })
-    
-    if (!response.data || !response.data.token) {
-      throw new Error('Invalid Shiprocket API User credentials')
-    }
-    
-    this.token = response.data.token
-    // Token is valid for 240 hours (10 days)
-    this.tokenExpiry = Date.now() + (240 * 60 * 60 * 1000) // 10 days
-    
-    console.log('Shiprocket external API authentication successful')
-    console.log('Token expires in:', new Date(this.tokenExpiry))
-    return this.token
+    return await getShiprocketToken()
   }
 
   async getToken() {

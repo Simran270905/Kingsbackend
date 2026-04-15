@@ -300,7 +300,22 @@ export const updateProduct = catchAsync(async (req, res) => {
   const { id } = req.params
   const updates = req.body
 
-  console.log("ð Incoming body:", req.body)
+  // STEP 1: FIX TYPE ISSUE (CRITICAL) - Convert ALL prices to numbers BEFORE validation
+  const originalPrice = Number(req.body.originalPrice)
+  const sellingPrice = Number(req.body.sellingPrice)
+  const purchasePrice = Number(req.body.purchasePrice)
+
+  // STEP 4: DEBUG LOG
+  console.log({
+    originalPrice,
+    sellingPrice,
+    purchasePrice,
+    types: {
+      originalPrice: typeof originalPrice,
+      sellingPrice: typeof sellingPrice,
+      purchasePrice: typeof purchasePrice
+    }
+  })
 
   // ✅ FIXED: Handle both camelCase and snake_case for sellingPrice
   if (updates.sellingPrice || updates.selling_price) {
@@ -316,15 +331,14 @@ export const updateProduct = catchAsync(async (req, res) => {
       await deleteCloudinaryImages(removedImages)
     }
   }
-  
-  // STEP 6: BACKEND FIX - CONDITIONAL VALIDATION
-  // Check if pricing fields are being updated
-  const pricingFieldsUpdated = (
-    updates.originalPrice !== undefined || 
-    updates.price !== undefined || 
-    updates.purchasePrice !== undefined ||
-    updates.sellingPrice !== undefined
-  )
+
+  // STEP 2: FIX VALIDATION LOGIC - Ensure ONLY this rule
+  if (sellingPrice > originalPrice) {
+    return res.status(400).json({
+      success: false,
+      message: "Selling price cannot be greater than MRP"
+    })
+  }
 
   // Validate product data if provided
   if (updates.name || updates.description || updates.sellingPrice || updates.category || updates.images) {
@@ -347,19 +361,6 @@ export const updateProduct = catchAsync(async (req, res) => {
       console.log("â Validation error:", validation.errors)
       console.log("â Product data validated:", productData)
       return sendError(res, 'Validation failed', 400, validation.errors)
-    }
-
-    // STEP 6: ONLY VALIDATE PRICING WHEN PRICING FIELDS ARE MODIFIED
-    if (pricingFieldsUpdated) {
-      // Use updated values if provided, otherwise use existing values
-      const finalSellingPrice = updates.sellingPrice !== undefined ? updates.sellingPrice : existing.sellingPrice
-      const finalOriginalPrice = updates.originalPrice !== undefined ? updates.originalPrice : 
-                              updates.price !== undefined ? updates.price : existing.originalPrice
-      
-      // Validate pricing logic: selling price should never be greater than original price
-      if (finalSellingPrice && finalOriginalPrice && finalSellingPrice > finalOriginalPrice) {
-        return sendError(res, 'Selling price cannot be greater than MRP (original price)', 400)
-      }
     }
   }
   

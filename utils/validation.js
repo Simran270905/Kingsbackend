@@ -42,6 +42,8 @@ export const validateProduct = (product) => {
 export const validateOrder = (order) => {
   const errors = []
   
+  console.log('🔍 Validating order:', JSON.stringify(order, null, 2))
+  
   if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
     errors.push('Order must contain at least one item')
   }
@@ -52,6 +54,8 @@ export const validateOrder = (order) => {
     errors.push('Shipping address is required')
   } else {
     const { firstName, lastName, email, streetAddress, city, state, zipCode, mobile } = order.shippingAddress
+    console.log('🔍 Shipping address fields:', { firstName, lastName, email, streetAddress, city, state, zipCode, mobile })
+    
     if (!firstName) errors.push('First name is required')
     if (!lastName) errors.push('Last name is required')
     if (!email) errors.push('Email is required')
@@ -62,6 +66,7 @@ export const validateOrder = (order) => {
     if (!mobile) errors.push('Mobile number is required')
   }
   
+  console.log('🚫 Validation errors:', errors)
   return { valid: errors.length === 0, errors }
 }
 

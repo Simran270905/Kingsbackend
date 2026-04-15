@@ -7,6 +7,61 @@ let shiprocketToken = null
 let tokenExpiry = null
 let lastLoginAttempt = 0
 
+// Rate limiting guard to prevent repeated login attempts
+const safeLoginGuard = () => {
+  const now = Date.now()
+  if (now - lastLoginAttempt < 10000) { // 10 second cooldown
+    throw new Error('Shiprocket login blocked: Too many attempts. Please wait.')
+  }
+  lastLoginAttempt = now
+}
+
+// Safe token management with caching
+const getShiprocketToken = async () => {
+  // Use cached token if valid
+  if (shiprocketToken && Date.now() < tokenExpiry) {
+    console.log('Using cached Shiprocket token')
+    return shiprocketToken
+  }
+
+  // Rate limiting protection
+  safeLoginGuard()
+
+  try {
+    console.log('Authenticating with Shiprocket API...')
+    const response = await axios.post(
+      `${SHIPROCKET_BASE_URL}/external/auth/login`,
+      {
+        email: process.env.SHIPROCKET_API_EMAIL,
+        password: process.env.SHIPROCKET_API_PASSWORD,
+      },
+      {
+        timeout: 15000 // 15 second timeout
+      }
+    )
+
+    if (!response.data || !response.data.token) {
+      console.error('Shiprocket authentication failed: Invalid credentials')
+      throw new Error('Shiprocket authentication failed: Invalid credentials')
+    }
+
+    // Cache the token globally
+    shiprocketToken = response.data.token
+    // Token valid for 240 hours (10 days)
+    tokenExpiry = Date.now() + (240 * 60 * 60 * 1000)
+    
+    console.log('Shiprocket authentication successful')
+    console.log('Token expires in:', new Date(tokenExpiry))
+    return shiprocketToken
+
+  } catch (error) {
+    console.error('Shiprocket login failed:', error.response?.data?.message || error.message)
+    
+    // DO NOT RETRY - Fail fast to prevent account blocking
+    throw new Error('Shiprocket authentication failed')
+  }
+}
+
 class ShiprocketService {
   constructor() {
     // Use global cache instead of instance variables
@@ -18,71 +73,16 @@ class ShiprocketService {
     }
   }
 
-  // Rate limiting guard to prevent repeated login attempts
-  safeLoginGuard = () => {
-    const now = Date.now()
-    if (now - lastLoginAttempt < 10000) { // 10 second cooldown
-      throw new Error('Shiprocket login blocked: Too many attempts. Please wait.')
-    }
-    lastLoginAttempt = now
-  }
-
-  // Safe token management with caching
-  getShiprocketToken = async () => {
-    // Use cached token if valid
-    if (shiprocketToken && Date.now() < tokenExpiry) {
-      console.log('Using cached Shiprocket token')
-      return shiprocketToken
-    }
-
-    // Rate limiting protection
-    this.safeLoginGuard()
-
-    try {
-      console.log('Authenticating with Shiprocket API...')
-      const response = await axios.post(
-        `${SHIPROCKET_BASE_URL}/external/auth/login`,
-        {
-          email: process.env.SHIPROCKET_API_EMAIL,
-          password: process.env.SHIPROCKET_API_PASSWORD,
-        },
-        {
-          timeout: 15000 // 15 second timeout
-        }
-      )
-
-      if (!response.data || !response.data.token) {
-        console.error('Shiprocket authentication failed: Invalid credentials')
-        throw new Error('Shiprocket authentication failed: Invalid credentials')
-      }
-
-      // Cache the token globally
-      shiprocketToken = response.data.token
-      // Token valid for 240 hours (10 days)
-      tokenExpiry = Date.now() + (240 * 60 * 60 * 1000)
-      
-      console.log('Shiprocket authentication successful')
-      console.log('Token expires in:', new Date(tokenExpiry))
-      return shiprocketToken
-
-    } catch (error) {
-      console.error('Shiprocket login failed:', error.response?.data?.message || error.message)
-      
-      // DO NOT RETRY - Fail fast to prevent account blocking
-      throw new Error('Shiprocket authentication failed')
-    }
-  }
-
   async authenticate() {
     this.validateConfig()
     return await getShiprocketToken()
   }
 
   async getToken() {
-    if (!this.token || Date.now() >= this.tokenExpiry) {
+    if (!shiprocketToken || Date.now() >= tokenExpiry) {
       await this.authenticate()
     }
-    return this.token
+    return shiprocketToken
   }
 
   validateOrderData(orderData) {
@@ -182,16 +182,26 @@ class ShiprocketService {
         }
       )
 
-      if (!response.data || !response.data.shipment_id) {
+      console.log('🔍 DEBUG - Shiprocket API response:', JSON.stringify(response.data, null, 2))
+
+      if (!response.data) {
         throw new Error('Invalid response from Shiprocket')
       }
 
+      // Handle different response field names
+      const shipmentId = response.data.shipment_id || response.data.shipment_id || response.data.id
+      console.log('🔍 DEBUG - Extracted shipmentId:', shipmentId)
+      
+      if (!shipmentId) {
+        throw new Error('No shipment ID in Shiprocket response')
+      }
+
       const result = {
-        shipmentId: response.data.shipment_id,
-        trackingUrl: `https://shiprocket.co/tracking/${response.data.shipment_id}`,
+        shipmentId: shipmentId,
+        trackingUrl: `https://shiprocket.co/tracking/${shipmentId}`,
         status: 'created',
-        courierName: response.data.courier_name || 'Partner Courier',
-        estimatedDelivery: response.data.estimated_delivery_days || '5-7 working days'
+        courierName: response.data.courier_name || response.data.courier_name || 'Partner Courier',
+        estimatedDelivery: response.data.estimated_delivery_days || response.data.estimated_delivery_days || '5-7 working days'
       }
 
       console.log('Shiprocket order created successfully:', result)

@@ -298,41 +298,19 @@ export const createProduct = catchAsync(async (req, res) => {
 // UPDATE product
 export const updateProduct = catchAsync(async (req, res) => {
   const { id } = req.params
-  const updates = req.body
 
   // STEP 1: FIX TYPE ISSUE (CRITICAL) - Convert ALL prices to numbers BEFORE validation
   const originalPrice = Number(req.body.originalPrice)
   const sellingPrice = Number(req.body.sellingPrice)
   const purchasePrice = Number(req.body.purchasePrice)
 
-  // STEP 4: DEBUG LOG
-  console.log({
+  // STEP 5: DEBUG LOG
+  console.log("VALIDATION CHECK:", {
     originalPrice,
-    sellingPrice,
-    purchasePrice,
-    types: {
-      originalPrice: typeof originalPrice,
-      sellingPrice: typeof sellingPrice,
-      purchasePrice: typeof purchasePrice
-    }
+    sellingPrice
   })
 
-  // ✅ FIXED: Handle both camelCase and snake_case for sellingPrice
-  if (updates.sellingPrice || updates.selling_price) {
-    updates.sellingPrice = updates.sellingPrice || updates.selling_price
-    delete updates.selling_price // Remove snake_case version
-  }
-
-  // Cloudinary: delete removed images
-  if (updates.images) {
-    const existing = await Product.findById(id)
-    if (existing && existing.images) {
-      const removedImages = existing.images.filter(img => !updates.images.includes(img))
-      await deleteCloudinaryImages(removedImages)
-    }
-  }
-
-  // STEP 2: FIX VALIDATION LOGIC - Ensure ONLY this rule
+  // STEP 2: FIX VALIDATION LOGIC - Ensure ONLY this rule using NEW values
   if (sellingPrice > originalPrice) {
     return res.status(400).json({
       success: false,
@@ -340,20 +318,30 @@ export const updateProduct = catchAsync(async (req, res) => {
     })
   }
 
-  // Validate product data if provided
-  if (updates.name || updates.description || updates.sellingPrice || updates.category || updates.images) {
+  // Cloudinary: delete removed images
+  if (req.body.images) {
+    const existing = await Product.findById(id)
+    if (existing && existing.images) {
+      const removedImages = existing.images.filter(img => !req.body.images.includes(img))
+      await deleteCloudinaryImages(removedImages)
+    }
+  }
+
+  // STEP 3: ENSURE VALIDATION RUNS BEFORE UPDATE
+  // Basic validation for required fields
+  if (req.body.name || req.body.description || req.body.category || req.body.images) {
     const existing = await Product.findById(id).populate('category brand')
     if (!existing) {
       return sendError(res, 'Product not found', 404)
     }
     
     const productData = {
-      name: updates.name || existing.name,
-      description: updates.description || existing.description,
-      originalPrice: updates.originalPrice || updates.price || existing.originalPrice,
-      sellingPrice: updates.sellingPrice || existing.sellingPrice,
-      category: updates.category || existing.category,
-      images: updates.images || existing.images
+      name: req.body.name || existing.name,
+      description: req.body.description || existing.description,
+      originalPrice: req.body.originalPrice || existing.originalPrice,
+      sellingPrice: req.body.sellingPrice || existing.sellingPrice,
+      category: req.body.category || existing.category,
+      images: req.body.images || existing.images
     }
     
     const validation = validateProduct(productData)
@@ -364,10 +352,11 @@ export const updateProduct = catchAsync(async (req, res) => {
     }
   }
   
+  // STEP 6: FINAL UPDATE - Use req.body directly
   try {
     const product = await Product.findByIdAndUpdate(
       id,
-      updates,
+      req.body,
       { new: true, runValidators: true }
     )
     

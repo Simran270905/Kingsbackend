@@ -306,6 +306,7 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
           discountApplied: orderData.discountApplied
         }
       }
+    })
     
     try {
       await order.save()

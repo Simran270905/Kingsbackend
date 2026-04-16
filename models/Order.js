@@ -60,9 +60,32 @@ const orderSchema = new mongoose.Schema(
   {
         items: [orderItemSchema],
     customer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Customer',
-      required: false
+      firstName: {
+        type: String,
+        required: false
+      },
+      lastName: {
+        type: String,
+        required: false
+      },
+      name: {
+        type: String,
+        required: false
+      },
+      email: {
+        type: String,
+        required: false,
+        match: /.+@.+\..+/
+      },
+      phone: {
+        type: String,
+        required: false
+      },
+      mobile: {
+        type: String,
+        required: false,
+        match: /^[0-9]{10}$/
+      }
     },
     guestInfo: {
       firstName: {

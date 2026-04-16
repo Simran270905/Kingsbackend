@@ -66,8 +66,16 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
       // Get customer information from guestInfo (primary for guest checkout)
       let customerInfo = {}
       
-      if (order.guestInfo) {
-        // Guest checkout - use guestInfo (primary for this system)
+      if (order.customer && (order.customer.name || order.customer.firstName || order.customer.email)) {
+        // Customer object (primary for registered users)
+        customerInfo = {
+          name: order.customer.name || `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim() || 'Guest User',
+          email: order.customer.email || 'N/A',
+          phone: order.customer.phone || order.customer.mobile || 'N/A',
+          address: order.shippingAddress || {}
+        }
+      } else if (order.guestInfo) {
+        // Guest checkout - use guestInfo (fallback)
         customerInfo = {
           name: `${order.guestInfo.firstName || ''} ${order.guestInfo.lastName || ''}`.trim() || 'Guest User',
           email: order.guestInfo.email || 'N/A',
@@ -78,14 +86,6 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
             state: order.guestInfo.state || 'N/A',
             zipCode: order.guestInfo.zipCode || 'N/A'
           }
-        }
-      } else if (order.customer && typeof order.customer === 'object' && !order.customer._id) {
-        // Embedded customer object (not a reference)
-        customerInfo = {
-          name: order.customer?.name || order.customer?.firstName || 'N/A',
-          email: order.customer?.email || 'N/A',
-          phone: order.customer?.phone || order.customer?.mobile || 'N/A',
-          address: order.shippingAddress || {}
         }
       } else if (order.userId) {
         // Orders with userId field (legacy)

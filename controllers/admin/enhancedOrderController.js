@@ -141,35 +141,32 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     })
     
     sendSuccess(res, {
-      success: true,
-      data: {
-        orders: transformedOrders,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(totalOrders / parseInt(limit)),
-          totalOrders,
-          hasNext: skip + parseInt(limit) < totalOrders,
-          hasPrev: page > 1
-        },
-        filters: {
-          status,
-          paymentStatus,
-          paymentMethod,
-          sortBy,
-          sortOrder
-        },
-        stats: {
-          totalRevenue,
-          totalOrders,
-          paymentStatusBreakdown: paymentStatusBreakdown.reduce((acc, item) => {
-            acc[item._id] = item.count
-            return acc
-          }, {}),
-          paymentMethodBreakdown: paymentMethodBreakdown.reduce((acc, item) => {
-            acc[item._id] = item.count
-            return acc
-          }, {})
-        }
+      orders: transformedOrders,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalOrders / parseInt(limit)),
+        totalOrders,
+        hasNext: skip + parseInt(limit) < totalOrders,
+        hasPrev: page > 1
+      },
+      filters: {
+        status,
+        paymentStatus,
+        paymentMethod,
+        sortBy,
+        sortOrder
+      },
+      stats: {
+        totalRevenue,
+        totalOrders,
+        paymentStatusBreakdown: paymentStatusBreakdown.reduce((acc, item) => {
+          acc[item._id] = item.count
+          return acc
+        }, {}),
+        paymentMethodBreakdown: paymentMethodBreakdown.reduce((acc, item) => {
+          acc[item._id] = item.count
+          return acc
+        }, {})
       }
     })
     
@@ -216,18 +213,6 @@ export const getOrderDetailsEnhanced = catchAsync(async (req, res) => {
         default: return { color: 'gray', text: status }
       }
     }
-    
-    const paymentStatusBadge = getPaymentStatusBadge(order.paymentStatus)
-    
-    console.log('📋 Enhanced Order Details Retrieved:', {
-      orderId: order._id,
-      paymentMethod: order.paymentMethod,
-      paymentStatus: order.paymentStatus,
-      transactionId: order.razorpayPaymentId,
-      amountPaid: order.amountPaid,
-      totalAmount: order.totalAmount,
-      paymentDate: order.paymentDate
-    })
     
     sendSuccess(res, {
       success: true,

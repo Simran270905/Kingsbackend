@@ -6,6 +6,7 @@ const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1'
 let shiprocketToken = null
 let tokenExpiry = null
 let lastLoginAttempt = 0
+let accountBlockedUntil = null // Track when account is blocked
 
 // Rate limiting guard to prevent repeated login attempts
 const safeLoginGuard = () => {
@@ -19,6 +20,12 @@ const safeLoginGuard = () => {
 // Enhanced token management with auto-re-authentication
 const getShiprocketToken = async () => {
   const now = Date.now()
+  
+  // Check if account is blocked
+  if (accountBlockedUntil && now < accountBlockedUntil) {
+    const waitTime = Math.ceil((accountBlockedUntil - now) / (1000 * 60)) // minutes
+    throw new Error(`Shiprocket account is temporarily blocked. Please wait ${waitTime} minutes before retrying.`)
+  }
   
   // Check if token is expired or will expire within 5 minutes (300000 ms)
   const fiveMinutesFromNow = now + 300000
@@ -91,7 +98,15 @@ const getShiprocketToken = async () => {
     } else if (status === 429) {
       throw new Error('Shiprocket authentication failed: Too many login attempts. Please wait before retrying.')
     } else if (status === 403) {
-      throw new Error('Shiprocket authentication failed: Account blocked. Please contact Shiprocket support.')
+      // Account blocked - set 2-hour cooldown
+      console.error('CRITICAL: Shiprocket account blocked due to failed login attempts')
+      const now = Date.now()
+      accountBlockedUntil = now + (2 * 60 * 60 * 1000) // 2 hours from now
+      shiprocketToken = null
+      tokenExpiry = null
+      const unblockTime = new Date(accountBlockedUntil).toLocaleString()
+      console.error(`Account blocked until: ${unblockTime}`)
+      throw new Error(`Shiprocket account is temporarily blocked due to failed login attempts. Account will be unblocked at ${unblockTime}, or contact Shiprocket support to unblock immediately.`)
     } else {
       throw new Error(`Shiprocket authentication failed: ${message}`)
     }

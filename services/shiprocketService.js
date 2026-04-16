@@ -463,4 +463,4 @@ const validateShiprocketConfig = () => {
 // Validate configuration on startup
 validateShiprocketConfig()
 
-module.exports = ShiprocketService
+export default ShiprocketService

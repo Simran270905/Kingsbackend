@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import User from '../../models/User.js'
-import Order, { default as OrderDefault } from '../../../models/Order.js'
+import Order, { default as OrderDefault } from '../../models/Order.js'
 import jwt from 'jsonwebtoken'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 

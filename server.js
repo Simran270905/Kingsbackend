@@ -311,7 +311,6 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
       socketTimeoutMS: 60000, // Close sockets after 60 seconds of inactivity
       connectTimeoutMS: 10000, // Time to establish initial connection
-      heartbeatFrequencyMS: 10000, // Frequency of heartbeat checks
       retryWrites: true, // Retry write operations
       retryReads: true, // Retry read operations
     }
@@ -381,14 +380,18 @@ process.on('unhandledRejection', (err) => {
 })
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('📡 SIGTERM signal received: closing HTTP server')
-  server.close(() => {
+  server.close(async () => {
     console.log('HTTP server closed')
-    mongoose.connection.close(() => {
+    try {
+      await mongoose.connection.close()
       console.log('MongoDB connection closed')
       process.exit(0)
-    })
+    } catch (err) {
+      console.error('Error closing MongoDB connection:', err)
+      process.exit(1)
+    }
   })
 })
 

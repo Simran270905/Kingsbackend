@@ -40,7 +40,6 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     
     // Fetch orders with payment details and customer information
     const orders = await Order.find(query)
-      .populate('paymentId', 'razorpayPaymentId status createdAt')
       .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit))

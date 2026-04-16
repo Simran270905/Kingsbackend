@@ -325,8 +325,8 @@ export const createOrderShipment = catchAsync(async (req, res) => {
       return sendError(res, 'Shipment can only be created for paid orders', 400)
     }
 
-    // Validation: Check if shipment already created
-    if (order.shippingStatus !== 'not_created') {
+    // Validation: Check if shipment already created (allow retry for failed shipments)
+    if (order.shippingStatus && order.shippingStatus !== 'not_created' && order.shippingStatus !== 'failed') {
       return sendError(res, 'Shipment already created for this order', 400)
     }
 
@@ -354,6 +354,7 @@ export const createOrderShipment = catchAsync(async (req, res) => {
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
       {
+        shipmentId: shipmentResult.shipmentId,
         shiprocketOrderId: shipmentResult.shipmentId,
         trackingUrl: shipmentResult.trackingUrl,
         courierName: shipmentResult.courierName,
@@ -393,14 +394,24 @@ export const createOrderShipment = catchAsync(async (req, res) => {
 export const trackOrderShipment = catchAsync(async (req, res) => {
   try {
     const { id } = req.params
+    console.log('Tracking shipment for order:', id)
 
     // Find the order
     const order = await Order.findById(id)
     if (!order) {
+      console.log('Order not found:', id)
       return sendError(res, 'Order not found', 404)
     }
 
-    if (!order.shiprocketOrderId) {
+    console.log('Order found:', {
+      orderId: order._id,
+      shipmentId: order.shipmentId,
+      shiprocketOrderId: order.shiprocketOrderId,
+      trackingUrl: order.trackingUrl
+    })
+
+    if (!order.shipmentId) {
+      console.log('No shipment ID found for order:', id)
       return sendError(res, 'No shipment found for this order', 404)
     }
 
@@ -408,7 +419,7 @@ export const trackOrderShipment = catchAsync(async (req, res) => {
     const shiprocketService = (await import('../../services/shiprocketService.js')).default
 
     // Get tracking information
-    const trackingResult = await shiprocketService.getTracking(order.shiprocketOrderId)
+    const trackingResult = await shiprocketService.getTracking(order.shipmentId)
 
     if (!trackingResult.success) {
       return sendError(res, trackingResult.error || 'Failed to track shipment', 500)

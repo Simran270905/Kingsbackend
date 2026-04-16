@@ -17,4 +17,9 @@ router.put('/enhanced/:id/mark-cod-paid', protectAdmin, markCODOrderAsPaidEnhanc
 router.post('/enhanced/:id/create-shipment', protectAdmin, createOrderShipment)
 router.get('/enhanced/:id/track-shipment', protectAdmin, trackOrderShipment)
 
+// Test endpoint
+router.get('/test', protectAdmin, (req, res) => {
+  res.json({ success: true, message: 'Enhanced order routes working!' })
+})
+
 export default router

@@ -575,14 +575,15 @@ export const trackOrder = catchAsync(async (req, res) => {
   console.log(`📍 Order tracking requested: ${orderId} | Status: ${order.status}`)
   
   // Return only safe tracking information with proper customer/guest handling
-  const customerInfo = order.customer || order.guestInfo || {}
+  // For guest orders, use guestInfo as shippingAddress
+  const shippingAddress = order.guestInfo || {}
   
   sendSuccess(res, {
     orderId: order._id,
     status: order.status,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
-    shippingAddress: customerInfo,
+    shippingAddress: shippingAddress,
     items: order.items.map(item =>({
       name: item.name,
       quantity: item.quantity,

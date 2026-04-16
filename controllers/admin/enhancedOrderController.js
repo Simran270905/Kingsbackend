@@ -41,7 +41,6 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     // Fetch orders with payment details and customer information
     // FIXED: Remove any userId filtering to get ALL orders for admin
     const orders = await Order.find(query)
-      .populate('customer', 'name email phone')
       .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit))
@@ -64,11 +63,11 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     
     // Transform orders to include customer details and shiprocket ID
     const transformedOrders = orders.map(order => {
-      // Get customer information from guestInfo, customer, or shippingAddress
+      // Get customer information from guestInfo (primary for guest checkout)
       let customerInfo = {}
       
       if (order.guestInfo) {
-        // Guest checkout - use guestInfo
+        // Guest checkout - use guestInfo (primary for this system)
         customerInfo = {
           name: `${order.guestInfo.firstName || ''} ${order.guestInfo.lastName || ''}`.trim() || 'Guest User',
           email: order.guestInfo.email || 'N/A',
@@ -80,16 +79,16 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
             zipCode: order.guestInfo.zipCode || 'N/A'
           }
         }
-      } else if (order.customer) {
-        // Registered user with customer reference
+      } else if (order.customer && typeof order.customer === 'object' && !order.customer._id) {
+        // Embedded customer object (not a reference)
         customerInfo = {
-          name: order.customer?.name || 'N/A',
+          name: order.customer?.name || order.customer?.firstName || 'N/A',
           email: order.customer?.email || 'N/A',
-          phone: order.customer?.phone || 'N/A',
+          phone: order.customer?.phone || order.customer?.mobile || 'N/A',
           address: order.shippingAddress || {}
         }
       } else if (order.userId) {
-        // Orders with userId field (from MongoDB)
+        // Orders with userId field (legacy)
         customerInfo = {
           name: order.userId?.name || 'N/A',
           email: order.userId?.email || 'N/A',
@@ -99,9 +98,9 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
       } else {
         // Fallback - try to extract from any available fields
         customerInfo = {
-          name: order.customer?.name || order.shippingAddress?.firstName || 'Guest User',
-          email: order.customer?.email || order.shippingAddress?.email || 'N/A',
-          phone: order.customer?.phone || order.shippingAddress?.mobile || 'N/A',
+          name: 'Guest User',
+          email: order.shippingAddress?.email || 'N/A',
+          phone: order.shippingAddress?.mobile || 'N/A',
           address: order.shippingAddress || {}
         }
       }

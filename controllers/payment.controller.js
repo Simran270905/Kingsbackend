@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import Order from '../models/Order.js'
-import { createShiprocketOrder } from '../services/shiprocket.service.js'
+import ShiprocketService from '../services/shiprocketService.js'
 import { sendOrderConfirmationEmail } from '../services/email.service.js'
 
 // Verify Razorpay payment and create order
@@ -80,12 +80,22 @@ const verifyPayment = async (req, res) => {
 
     // Create Shiprocket order
     try {
-      const shiprocketResponse = await createShiprocketOrder(savedOrder)
+      const shiprocketService = new ShiprocketService()
+      const shiprocketResponse = await shiprocketService.createOrder(savedOrder)
       
-      // Update order with Shiprocket details
-      savedOrder.shipping.shiprocketOrderId = shiprocketResponse.order_id
-      savedOrder.shipping.shiprocketShipmentId = shiprocketResponse.shipment_id
-      savedOrder.shipping.status = 'processing'
+      if (shiprocketResponse.status === 'created') {
+        // Update order with Shiprocket details
+        savedOrder.shipping.shiprocketOrderId = shiprocketResponse.shipmentId
+        savedOrder.shipping.trackingUrl = shiprocketResponse.trackingUrl
+        savedOrder.shipping.status = 'created'
+        savedOrder.shiprocketError = null // Clear any previous errors
+      } else {
+        // Store error details in order
+        savedOrder.shipping.status = 'failed'
+        savedOrder.shiprocketError = JSON.stringify(shiprocketResponse)
+        savedOrder.shiprocketRetries = (savedOrder.shiprocketRetries || 0) + 1
+        savedOrder.lastShiprocketRetry = new Date()
+      }
       await savedOrder.save()
     } catch (shiprocketError) {
       console.error('Shiprocket order creation failed:', shiprocketError)
@@ -241,8 +251,8 @@ const trackOrder = async (req, res) => {
     // If AWB code exists, get live tracking from Shiprocket
     if (order.shipping.awbCode) {
       try {
-        const { trackShipment } = await import('../services/shiprocket.service.js')
-        const shiprocketTracking = await trackShipment(order.shipping.awbCode)
+        const shiprocketService = new ShiprocketService()
+        const shiprocketTracking = await shiprocketService.getTracking(order.shipping.awbCode)
         
         trackingData = {
           ...trackingData,

@@ -1,4 +1,4 @@
-import axios from 'axios'
+const axios = require('axios')
 
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1'
 
@@ -23,7 +23,7 @@ const getShiprocketToken = async () => {
   // Check if token is expired or will expire within 5 minutes (300000 ms)
   const fiveMinutesFromNow = now + 300000
   
-  if (shiprocketToken && tokenExpiry && now < tokenExpiry && tokenExpiry > fiveMinutesFromNow) {
+  if (shiprocketToken && tokenExpiry && tokenExpiry > fiveMinutesFromNow) {
     console.log('✅ Using valid Shiprocket token (expires in:', Math.floor((tokenExpiry - now) / 60000), 'minutes)')
     return shiprocketToken
   }
@@ -34,9 +34,12 @@ const getShiprocketToken = async () => {
   try {
     console.log('🔐 Authenticating with Shiprocket API...')
     
-    // Validate environment variables first
-    if (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD) {
-      throw new Error('Shiprocket credentials not configured in environment variables')
+    // Validate environment variables first (with fallbacks)
+    const shiprocketEmail = process.env.SHIPROCKET_API_EMAIL || process.env.SHIPROCKET_EMAIL
+    const shiprocketPassword = process.env.SHIPROCKET_API_PASSWORD || process.env.SHIPROCKET_PASSWORD
+    
+    if (!shiprocketEmail || !shiprocketPassword) {
+      throw new Error('Shiprocket credentials not configured in environment variables. Set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD')
     }
     
     console.log('🔍 Shiprocket credentials validation passed')
@@ -44,8 +47,8 @@ const getShiprocketToken = async () => {
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/external/auth/login`,
       {
-        email: process.env.SHIPROCKET_API_EMAIL,
-        password: process.env.SHIPROCKET_API_PASSWORD,
+        email: shiprocketEmail,
+        password: shiprocketPassword,
       },
       {
         timeout: 15000 // 15 second timeout
@@ -86,8 +89,11 @@ class ShiprocketService {
   }
 
   validateConfig() {
-    if (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD) {
-      throw new Error('Shiprocket API email and password are not configured. Please set SHIPROCKET_API_EMAIL and SHIPROCKET_API_PASSWORD in environment variables.')
+    const shiprocketEmail = process.env.SHIPROCKET_API_EMAIL || process.env.SHIPROCKET_EMAIL
+    const shiprocketPassword = process.env.SHIPROCKET_API_PASSWORD || process.env.SHIPROCKET_PASSWORD
+    
+    if (!shiprocketEmail || !shiprocketPassword) {
+      throw new Error('Shiprocket API email and password are not configured. Please set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD in environment variables.')
     }
     
     console.log('✅ Shiprocket configuration validated')
@@ -438,7 +444,10 @@ class ShiprocketService {
 // Production startup validation
 const validateShiprocketConfig = () => {
   try {
-    if (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD) {
+    const shiprocketEmail = process.env.SHIPROCKET_API_EMAIL || process.env.SHIPROCKET_EMAIL
+    const shiprocketPassword = process.env.SHIPROCKET_API_PASSWORD || process.env.SHIPROCKET_PASSWORD
+    
+    if (!shiprocketEmail || !shiprocketPassword) {
       console.warn('⚠️ Shiprocket credentials not configured - Shiprocket integration will be disabled')
       return false
     }
@@ -454,4 +463,4 @@ const validateShiprocketConfig = () => {
 // Validate configuration on startup
 validateShiprocketConfig()
 
-export default new ShiprocketService()
+module.exports = ShiprocketService

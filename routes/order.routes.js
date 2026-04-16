@@ -6,7 +6,7 @@ import {
   updateOrderStatus,
   syncShiprocketStatus,
   exportOrders
-} from '../controllers/order.controller.js'
+} from '../controllers/shared/orderController.js'
 
 const router = express.Router()
 

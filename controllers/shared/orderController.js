@@ -857,6 +857,75 @@ export const updateOrderPayment = catchAsync(async (req, res) => {
 
   console.log(`Payment updated for order: ${id} | Status: ${paymentStatus}`)
 
+  // CRITICAL FIX: Trigger Shiprocket after payment confirmation
+  if (paymentStatus === 'paid' && !order.shipmentId) {
+    setImmediate(async () => {
+      try {
+        console.log('💳 Payment confirmed - Creating shipment with Shiprocket for order:', order._id)
+        
+        // Prepare order data for Shiprocket
+        const orderDataForShiprocket = {
+          _id: order._id,
+          items: order.items,
+          shippingAddress: {
+            firstName: order.guestInfo?.firstName || order.customer?.firstName,
+            lastName: order.guestInfo?.lastName || order.customer?.lastName || '',
+            streetAddress: order.guestInfo?.streetAddress || order.customer?.streetAddress,
+            city: order.guestInfo?.city || order.customer?.city,
+            state: order.guestInfo?.state || order.customer?.state,
+            zipCode: order.guestInfo?.zipCode || order.customer?.zipCode,
+            mobile: order.guestInfo?.mobile || order.customer?.mobile,
+            email: order.guestInfo?.email || order.customer?.email
+          },
+          paymentMethod: order.paymentMethod,
+          totalAmount: order.totalAmount,
+          notes: order.notes
+        }
+        
+        const shiprocketService = new ShiprocketService()
+        const shipmentResult = await shiprocketService.createOrder(orderDataForShiprocket)
+        
+        // Update order with shipment result
+        const updatedOrder = await Order.findById(order._id)
+        
+        if (shipmentResult.status === 'created') {
+          updatedOrder.shipmentId = shipmentResult.shipmentId
+          updatedOrder.trackingUrl = shipmentResult.trackingUrl
+          updatedOrder.shippingStatus = 'created'
+          updatedOrder.trackingNumber = shipmentResult.shipmentId.toString()
+          updatedOrder.awbCode = shipmentResult.shipmentId.toString()
+          updatedOrder.courierName = shipmentResult.courierName
+          updatedOrder.estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+          updatedOrder.shiprocketError = null // Clear any previous errors
+          console.log('✅ Shipment created successfully:', shipmentResult.shipmentId)
+        } else {
+          // Store detailed error information
+          updatedOrder.shippingStatus = 'failed'
+          updatedOrder.shiprocketError = JSON.stringify(shipmentResult)
+          updatedOrder.shiprocketRetries = (updatedOrder.shiprocketRetries || 0) + 1
+          updatedOrder.lastShiprocketRetry = new Date()
+          console.log('❌ Shipment creation failed, stored error details:', shipmentResult.error)
+        }
+        
+        await updatedOrder.save()
+      } catch (err) {
+        console.error('❌ Shiprocket integration error:', err.message)
+        
+        // Update order with error details
+        const failedOrder = await Order.findById(order._id)
+        failedOrder.shippingStatus = 'failed'
+        failedOrder.shiprocketError = JSON.stringify({
+          error: err.message,
+          timestamp: new Date().toISOString(),
+          type: 'integration_error'
+        })
+        failedOrder.shiprocketRetries = (failedOrder.shiprocketRetries || 0) + 1
+        failedOrder.lastShiprocketRetry = new Date()
+        await failedOrder.save()
+      }
+    })
+  }
+
   sendSuccess(res, {
     orderId: order._id,
     paymentStatus: order.paymentStatus,

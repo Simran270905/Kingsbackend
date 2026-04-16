@@ -1,5 +1,5 @@
 import Order from '../models/Order.model.js'
-import { trackShipment } from '../services/shiprocket.service.js'
+import ShiprocketService from '../services/shiprocketService.js'
 
 // Get all orders with pagination and filtering
 const getAllOrders = async (req, res) => {
@@ -218,7 +218,8 @@ const syncShiprocketStatus = async (req, res) => {
     }
 
     // Get live tracking from Shiprocket
-    const trackingData = await trackShipment(order.shipping.awbCode)
+    const shiprocketService = new ShiprocketService()
+    const trackingData = await shiprocketService.getTracking(order.shipping.awbCode)
 
     // Update order with latest tracking data
     if (trackingData.tracking_data) {

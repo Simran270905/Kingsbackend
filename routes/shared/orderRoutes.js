@@ -34,7 +34,6 @@ router.get('/stats', getOrderStats)
 // Public order tracking (no authentication required)
 router.get('/track/:orderId', trackOrder)
 router.get('/track-by-phone', trackOrdersByPhone)
-router.get('/orders/track-by-phone', trackOrdersByPhone)
 
 // Remaining payment routes (admin only)
 router.get('/:orderId/remaining-payment', protectAdmin, getRemainingPayment)
@@ -55,7 +54,7 @@ router.post('/cod/mark-multiple-paid', protectAdmin, markMultipleCODAsPaid)
 router.patch('/:id/payment', updateOrderPayment)
 
 // Shiprocket integration routes
-router.post('/:id/shiprocket', createShiprocketOrder)
+router.post('/:id/shiprocket', protectAdmin, createShiprocketOrder)
 router.post('/:id/shiprocket/retry', protectAdmin, retryShiprocketOrder)
 router.get('/:id/tracking', getShipmentTracking)
 

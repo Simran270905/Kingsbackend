@@ -6,7 +6,7 @@ import {
   getTopProducts,
   getOrderStatusBreakdown,
   getShippingPerformance
-} from '../controllers/order.controller.js'
+} from '../controllers/shared/orderController.js'
 
 const router = express.Router()
 

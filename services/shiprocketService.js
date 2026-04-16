@@ -463,4 +463,5 @@ const validateShiprocketConfig = () => {
 // Validate configuration on startup
 validateShiprocketConfig()
 
-export default ShiprocketService
+// Export a singleton instance
+export default new ShiprocketService()

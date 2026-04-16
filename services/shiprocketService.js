@@ -16,7 +16,7 @@ const safeLoginGuard = () => {
   lastLoginAttempt = now
 }
 
-// Enhanced token management with proactive expiry validation
+// Enhanced token management with auto-re-authentication
 const getShiprocketToken = async () => {
   const now = Date.now()
   
@@ -24,7 +24,7 @@ const getShiprocketToken = async () => {
   const fiveMinutesFromNow = now + 300000
   
   if (shiprocketToken && tokenExpiry && tokenExpiry > fiveMinutesFromNow) {
-    console.log('✅ Using valid Shiprocket token (expires in:', Math.floor((tokenExpiry - now) / 60000), 'minutes)')
+    console.log('Using valid Shiprocket token (expires in:', Math.floor((tokenExpiry - now) / 60000), 'minutes)')
     return shiprocketToken
   }
 
@@ -32,29 +32,19 @@ const getShiprocketToken = async () => {
   safeLoginGuard()
 
   try {
-    console.log('🔐 Authenticating with Shiprocket API...')
+    console.log('Authenticating with Shiprocket API...')
     
-    // Validate environment variables first (with fallbacks)
-    const shiprocketEmail = process.env.SHIPROCKET_API_EMAIL || process.env.SHIPROCKET_EMAIL
-    const shiprocketPassword = process.env.SHIPROCKET_API_PASSWORD || process.env.SHIPROCKET_PASSWORD
+    // Get and clean credentials
+    const shiprocketEmail = (process.env.SHIPROCKET_API_EMAIL || process.env.SHIPROCKET_EMAIL || '').trim()
+    const shiprocketPassword = (process.env.SHIPROCKET_API_PASSWORD || process.env.SHIPROCKET_PASSWORD || '').trim()
     
+    // Validate credentials
     if (!shiprocketEmail || !shiprocketPassword) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('Shiprocket credentials not configured in environment variables. Set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD')
-      } else {
-        console.error('DEBUG - Environment variables not found:')
-        console.error('DEBUG - SHIPROCKET_API_EMAIL:', !!process.env.SHIPROCKET_API_EMAIL)
-        console.error('DEBUG - SHIPROCKET_EMAIL:', !!process.env.SHIPROCKET_EMAIL)
-        console.error('DEBUG - SHIPROCKET_API_PASSWORD:', !!process.env.SHIPROCKET_API_PASSWORD)
-        console.error('DEBUG - SHIPROCKET_PASSWORD:', !!process.env.SHIPROCKET_PASSWORD)
-        throw new Error('Shiprocket credentials not configured in environment variables. Set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD')
-      }
+      console.error('Shiprocket credentials not configured in environment variables')
+      throw new Error('Shiprocket credentials not configured. Set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD in environment variables')
     }
     
     console.log('Shiprocket credentials validation passed')
-    console.log('DEBUG - Email:', shiprocketEmail)
-    console.log('DEBUG - Password length:', shiprocketPassword ? shiprocketPassword.length : 0)
-    console.log('DEBUG - Password ends with %:', shiprocketPassword ? shiprocketPassword.endsWith('%') : 'N/A')
     
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/external/auth/login`,
@@ -63,35 +53,94 @@ const getShiprocketToken = async () => {
         password: shiprocketPassword,
       },
       {
-        timeout: 15000 // 15 second timeout
+        timeout: 15000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       }
     )
 
     if (!response.data || !response.data.token) {
-      console.error('❌ Shiprocket authentication failed: Invalid response format')
+      console.error('Shiprocket authentication failed: Invalid response format')
       throw new Error('Shiprocket authentication failed: Invalid response format')
     }
 
     // Cache the token globally (ensure clean token without whitespace)
     shiprocketToken = response.data.token.trim()
-    // Shiprocket tokens typically expire in 24 hours, but we'll use 23 hours for safety
-    tokenExpiry = now + (23 * 60 * 60 * 1000)
+    // Shiprocket tokens expire in 10 days, use 9 days for safety
+    tokenExpiry = now + (9 * 24 * 60 * 60 * 1000)
+    lastLoginAttempt = now
     
-    console.log('✅ Shiprocket authentication successful')
-    console.log('🕐 Token expires at:', new Date(tokenExpiry))
-    console.log('🔑 Token length:', shiprocketToken.length)
+    console.log('Shiprocket authentication successful')
+    console.log('Token expires at:', new Date(tokenExpiry))
     return shiprocketToken
 
   } catch (error) {
-    console.error('❌ Shiprocket login failed:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      url: `${SHIPROCKET_BASE_URL}/external/auth/login`
+    const status = error.response?.status
+    const message = error.response?.data?.message || error.message
+    
+    console.error('Shiprocket login failed:', {
+      status,
+      message,
+      timestamp: new Date().toISOString()
     })
     
-    // DO NOT RETRY - Fail fast to prevent account blocking
-    throw new Error(`Shiprocket authentication failed: ${error.response?.data?.message || error.message}`)
+    // Handle common authentication errors
+    if (status === 401) {
+      throw new Error('Shiprocket authentication failed: Invalid email and password combination')
+    } else if (status === 429) {
+      throw new Error('Shiprocket authentication failed: Too many login attempts. Please wait before retrying.')
+    } else if (status === 403) {
+      throw new Error('Shiprocket authentication failed: Account blocked. Please contact Shiprocket support.')
+    } else {
+      throw new Error(`Shiprocket authentication failed: ${message}`)
+    }
+  }
+}
+
+// Auto-re-authentication wrapper for API calls
+const makeAuthenticatedRequest = async (method, url, data = {}, headers = {}) => {
+  const maxRetries = 2
+  let retryCount = 0
+  
+  while (retryCount <= maxRetries) {
+    try {
+      // Get fresh token for each request
+      const token = await getShiprocketToken()
+      
+      const response = await axios({
+        method,
+        url,
+        data,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        timeout: 30000
+      })
+      
+      return response
+      
+    } catch (error) {
+      const status = error.response?.status
+      const message = error.response?.data?.message || error.message
+      
+      // If authentication error, clear token and retry
+      if (status === 401 && retryCount < maxRetries) {
+        console.log('Authentication error, clearing token and retrying...')
+        shiprocketToken = null
+        tokenExpiry = null
+        retryCount++
+        
+        // Add delay before retry
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        continue
+      }
+      
+      // If other error or max retries reached, throw the error
+      throw error
+    }
   }
 }
 
@@ -224,16 +273,10 @@ class ShiprocketService {
         paymentMethod: payload.payment_method
       })
 
-      const response = await axios.post(
+      const response = await makeAuthenticatedRequest(
+        'POST',
         `${SHIPROCKET_BASE_URL}/external/orders/create/adhoc`,
-        payload,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000 // 30 second timeout
-        }
+        payload
       )
 
       const duration = Date.now() - startTime
@@ -445,6 +488,10 @@ class ShiprocketService {
     }
 
     console.log(`🔄 Retrying Shiprocket order creation for ${order._id} (attempt ${order.shiprocketRetries + 1}/${maxRetries})`)
+
+    // Clear token to force fresh authentication for retry
+    shiprocketToken = null
+    tokenExpiry = null
 
     const result = await this.createOrder(orderData)
     

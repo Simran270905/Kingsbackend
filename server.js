@@ -395,4 +395,4 @@ process.on('SIGTERM', async () => {
   })
 })
 
-export default app
+module.exports = app

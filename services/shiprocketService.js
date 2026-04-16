@@ -39,7 +39,16 @@ const getShiprocketToken = async () => {
     const shiprocketPassword = process.env.SHIPROCKET_API_PASSWORD || process.env.SHIPROCKET_PASSWORD
     
     if (!shiprocketEmail || !shiprocketPassword) {
-      throw new Error('Shiprocket credentials not configured in environment variables. Set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD')
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Shiprocket credentials not configured in environment variables. Set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD')
+      } else {
+        console.error('DEBUG - Environment variables not found:')
+        console.error('DEBUG - SHIPROCKET_API_EMAIL:', !!process.env.SHIPROCKET_API_EMAIL)
+        console.error('DEBUG - SHIPROCKET_EMAIL:', !!process.env.SHIPROCKET_EMAIL)
+        console.error('DEBUG - SHIPROCKET_API_PASSWORD:', !!process.env.SHIPROCKET_API_PASSWORD)
+        console.error('DEBUG - SHIPROCKET_PASSWORD:', !!process.env.SHIPROCKET_PASSWORD)
+        throw new Error('Shiprocket credentials not configured in environment variables. Set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD')
+      }
     }
     
     console.log('Shiprocket credentials validation passed')
@@ -96,10 +105,19 @@ class ShiprocketService {
     const shiprocketPassword = process.env.SHIPROCKET_API_PASSWORD || process.env.SHIPROCKET_PASSWORD
     
     if (!shiprocketEmail || !shiprocketPassword) {
+      console.error('DEBUG - validateConfig: Environment variables not found:')
+      console.error('DEBUG - SHIPROCKET_API_EMAIL:', !!process.env.SHIPROCKET_API_EMAIL)
+      console.error('DEBUG - SHIPROCKET_EMAIL:', !!process.env.SHIPROCKET_EMAIL)
+      console.error('DEBUG - SHIPROCKET_API_PASSWORD:', !!process.env.SHIPROCKET_API_PASSWORD)
+      console.error('DEBUG - SHIPROCKET_PASSWORD:', !!process.env.SHIPROCKET_PASSWORD)
+      console.error('DEBUG - NODE_ENV:', process.env.NODE_ENV)
+      console.error('DEBUG - Available env vars:', Object.keys(process.env).filter(key => key.includes('SHIPROCKET')))
       throw new Error('Shiprocket API email and password are not configured. Please set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD in environment variables.')
     }
     
-    console.log('✅ Shiprocket configuration validated')
+    console.log('Shiprocket configuration validated')
+    console.log('DEBUG - Email:', shiprocketEmail)
+    console.log('DEBUG - Password length:', shiprocketPassword ? shiprocketPassword.length : 0)
   }
 
   async authenticate() {

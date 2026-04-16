@@ -39,7 +39,9 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1
     
     // Fetch orders with payment details and customer information
+    // FIXED: Remove any userId filtering to get ALL orders for admin
     const orders = await Order.find(query)
+      .populate('customer', 'name email phone')
       .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit))
@@ -62,7 +64,7 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
     
     // Transform orders to include customer details and shiprocket ID
     const transformedOrders = orders.map(order => {
-      // Get customer information from guestInfo or userId
+      // Get customer information from guestInfo, customer, or shippingAddress
       let customerInfo = {}
       
       if (order.guestInfo) {
@@ -78,8 +80,16 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
             zipCode: order.guestInfo.zipCode || 'N/A'
           }
         }
+      } else if (order.customer) {
+        // Registered user with customer reference
+        customerInfo = {
+          name: order.customer?.name || 'N/A',
+          email: order.customer?.email || 'N/A',
+          phone: order.customer?.phone || 'N/A',
+          address: order.shippingAddress || {}
+        }
       } else if (order.userId) {
-        // Registered user - use populated userId
+        // Orders with userId field (from MongoDB)
         customerInfo = {
           name: order.userId?.name || 'N/A',
           email: order.userId?.email || 'N/A',
@@ -87,12 +97,12 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
           address: order.shippingAddress || {}
         }
       } else {
-        // Fallback
+        // Fallback - try to extract from any available fields
         customerInfo = {
-          name: 'Guest User',
-          email: 'N/A',
-          phone: 'N/A',
-          address: {}
+          name: order.customer?.name || order.shippingAddress?.firstName || 'Guest User',
+          email: order.customer?.email || order.shippingAddress?.email || 'N/A',
+          phone: order.customer?.phone || order.shippingAddress?.mobile || 'N/A',
+          address: order.shippingAddress || {}
         }
       }
 

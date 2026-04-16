@@ -42,7 +42,10 @@ const getShiprocketToken = async () => {
       throw new Error('Shiprocket credentials not configured in environment variables. Set SHIPROCKET_EMAIL/SHIPROCKET_API_EMAIL and SHIPROCKET_PASSWORD/SHIPROCKET_API_PASSWORD')
     }
     
-    console.log('🔍 Shiprocket credentials validation passed')
+    console.log('Shiprocket credentials validation passed')
+    console.log('DEBUG - Email:', shiprocketEmail)
+    console.log('DEBUG - Password length:', shiprocketPassword ? shiprocketPassword.length : 0)
+    console.log('DEBUG - Password ends with %:', shiprocketPassword ? shiprocketPassword.endsWith('%') : 'N/A')
     
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/external/auth/login`,
@@ -408,7 +411,7 @@ class ShiprocketService {
     const orderData = {
       _id: order._id,
       items: order.items,
-      shippingAddress: {
+      shippingAddress: order.shippingAddress || {
         firstName: order.guestInfo?.firstName || order.customer?.firstName,
         lastName: order.guestInfo?.lastName || order.customer?.lastName || '',
         streetAddress: order.guestInfo?.streetAddress || order.customer?.streetAddress,

@@ -621,38 +621,30 @@ export const trackOrdersByPhone = catchAsync(async (req, res) => {
       { 'guestInfo.mobile': cleanPhone }
     ]
   }).select({
-    // Only return safe public fields
-    _id: 1,
-    status: 1,
-    paymentStatus: 1,
-    paymentMethod: 1,
-    items: 1,
-    subtotal: 1,
-    tax: 1,
-    shippingCost: 1,
-    codCharge: 1,
-    totalAmount: 1,
-    trackingNumber: 1,
-    trackingUrl: 1,
-    shippingStatus: 1,
-    createdAt: 1,
-    updatedAt: 1,
-    estimatedDelivery: 1,
-    deliveredAt: 1,
+    _id: 1, 
+    status: 1, 
+    paymentStatus: 1, 
+    paymentMethod: 1, 
+    items: 1, 
+    subtotal: 1, 
+    tax: 1, 
+    shippingCost: 1, 
+    codCharge: 1, 
+    totalAmount: 1, 
+    trackingNumber: 1, 
+    trackingUrl: 1, 
+    createdAt: 1, 
+    updatedAt: 1, 
+    estimatedDelivery: 1, 
+    deliveredAt: 1, 
     cancelledAt: 1
-  }).sort({ createdAt: -1 })
+  }).sort({ createdAt: -1 }) // Sort by date (newest first)
   
   if (!orders || orders.length === 0) {
-    console.log(`❌ No orders found for phone: ${cleanPhone}`)
-    return sendSuccess(res, {
-      orders: [],
-      message: 'No orders found for this phone number'
-    })
+    return sendSuccess(res, { orders: [], message: 'No orders found for this phone number' })
   }
   
-  console.log(`✅ Found ${orders.length} orders for phone: ${cleanPhone}`)
-  
-  // Transform orders to safe public format
+  // Return only safe public fields - exclude sensitive data
   const safeOrders = orders.map(order => ({
     orderId: order._id,
     orderDate: order.createdAt,

@@ -4,8 +4,16 @@ services:
     name: kkings-backend
     env: node
     plan: free
-    buildCommand: "npm install"
+    buildCommand: "npm install --production"
     startCommand: "node server.js"
+    healthCheckPath: /
+    healthCheck:
+      path: /
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      timeoutSeconds: 5
+      successThreshold: 1
+      failureThreshold: 3
     envVars:
       - key: NODE_ENV
         value: production
@@ -51,4 +59,3 @@ services:
         sync: false
       - key: SHIPROCKET_PICKUP_LOCATION
         value: Primary
-    healthCheckPath: /

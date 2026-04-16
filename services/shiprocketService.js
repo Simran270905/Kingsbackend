@@ -1,4 +1,4 @@
-const axios = require('axios')
+import axios from 'axios'
 
 const SHIPROCKET_BASE_URL = 'https://apiv2.shiprocket.in/v1'
 

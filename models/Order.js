@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+import mongoose from 'mongoose'
 
 const orderItemSchema = new mongoose.Schema({
   productId: {
@@ -389,6 +389,3 @@ const OrderModel = mongoose.model('Order', orderSchema)
 
 // ES Module default export
 export default OrderModel
-
-// CommonJS compatibility export
-module.exports = OrderModel

@@ -111,8 +111,7 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
   
   // Payment methods that require full payment only
   const fullPaymentOnlyMethods = ['upi', 'netbanking', 'card']
-  // Payment methods that require partial payment only
-  const partialPaymentOnlyMethods = ['cod']
+  // COD supports both payment plans (partial and full)
   
   // Validate payment method and plan combination
   if (orderData && orderData.paymentMethod && orderData.paymentPlan) {
@@ -121,10 +120,7 @@ export const verifyPaymentAndCreateOrder = catchAsync(async (req, res) => {
       console.log('Partial payment not allowed for payment method:', orderData.paymentMethod)
       return sendError(res, `Partial payment is not allowed for ${orderData.paymentMethod}. Please select full payment.`, 400)
     }
-    if (partialPaymentOnlyMethods.includes(paymentMethod) && orderData.paymentPlan === 'full') {
-      console.log('Full payment not allowed for payment method:', orderData.paymentMethod)
-      return sendError(res, `Full payment is not allowed for ${orderData.paymentMethod}. Please select partial payment.`, 400)
-    }
+    // Removed restriction for COD - now supports both full and partial payment
   }
   
   // Validation

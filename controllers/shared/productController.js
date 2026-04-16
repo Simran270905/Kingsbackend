@@ -176,7 +176,9 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
     category,
     $or: [
       { isActive: true },
-      { isActive: { $exists: false } }
+      { isActive: { $exists: false } },
+      { isActive: null },
+      { isActive: { $ne: false } }
     ]
   })
     .limit(parseInt(limit))

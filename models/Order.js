@@ -385,4 +385,10 @@ orderSchema.index({ 'shippingAddress.email': 1 })
 orderSchema.index({ status: 1, createdAt: -1 })
 orderSchema.index({ createdAt: -1 })
 
-module.exports = mongoose.model('Order', orderSchema)
+const OrderModel = mongoose.model('Order', orderSchema)
+
+// ES Module default export
+export default OrderModel
+
+// CommonJS compatibility export
+module.exports = OrderModel

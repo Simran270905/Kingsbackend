@@ -1,4 +1,4 @@
-import Order from '../../models/Order.js'
+import Order, { default as OrderDefault } from '../../models/Order.js'
 import Product from '../../models/Product.js'
 import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 

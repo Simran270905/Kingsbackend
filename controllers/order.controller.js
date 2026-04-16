@@ -1,4 +1,4 @@
-import Order from '../models/Order.model.js'
+import Order, { default as OrderDefault } from '../models/Order.js'
 import ShiprocketService from '../services/shiprocketService.js'
 
 // Get all orders with pagination and filtering

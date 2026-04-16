@@ -597,6 +597,96 @@ export const trackOrder = catchAsync(async (req, res) => {
   })
 })
 
+// GET orders by phone number (public endpoint)
+export const trackOrdersByPhone = catchAsync(async (req, res) => {
+  const { phone } = req.query
+  
+  if (!phone) {
+    return sendError(res, 'Phone number is required', 400)
+  }
+  
+  // Clean phone number - remove any non-digit characters
+  const cleanPhone = phone.replace(/\D/g, '')
+  
+  if (cleanPhone.length < 10) {
+    return sendError(res, 'Please enter a valid 10-digit phone number', 400)
+  }
+  
+  console.log(`📱 Tracking orders by phone: ${cleanPhone}`)
+  
+  // Find orders by phone number in both customer.mobile and guestInfo.mobile
+  const orders = await Order.find({
+    $or: [
+      { 'customer.mobile': cleanPhone },
+      { 'guestInfo.mobile': cleanPhone }
+    ]
+  }).select({
+    // Only return safe public fields
+    _id: 1,
+    status: 1,
+    paymentStatus: 1,
+    paymentMethod: 1,
+    items: 1,
+    subtotal: 1,
+    tax: 1,
+    shippingCost: 1,
+    codCharge: 1,
+    totalAmount: 1,
+    trackingNumber: 1,
+    trackingUrl: 1,
+    shippingStatus: 1,
+    createdAt: 1,
+    updatedAt: 1,
+    estimatedDelivery: 1,
+    deliveredAt: 1,
+    cancelledAt: 1
+  }).sort({ createdAt: -1 })
+  
+  if (!orders || orders.length === 0) {
+    console.log(`❌ No orders found for phone: ${cleanPhone}`)
+    return sendSuccess(res, {
+      orders: [],
+      message: 'No orders found for this phone number'
+    })
+  }
+  
+  console.log(`✅ Found ${orders.length} orders for phone: ${cleanPhone}`)
+  
+  // Transform orders to safe public format
+  const safeOrders = orders.map(order => ({
+    orderId: order._id,
+    orderDate: order.createdAt,
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    status: order.status,
+    items: order.items.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      subtotal: item.subtotal,
+      image: item.image
+    })),
+    amountBreakdown: {
+      subtotal: order.subtotal,
+      tax: order.tax,
+      shippingCost: order.shippingCost,
+      codCharge: order.codCharge,
+      total: order.totalAmount
+    },
+    shippingStatus: order.shippingStatus,
+    trackingNumber: order.trackingNumber,
+    trackingUrl: order.trackingUrl,
+    estimatedDelivery: order.estimatedDelivery,
+    deliveredAt: order.deliveredAt,
+    cancelledAt: order.cancelledAt
+  }))
+  
+  sendSuccess(res, {
+    orders: safeOrders,
+    count: safeOrders.length
+  })
+})
+
 // GET remaining payment details for an order
 export const getRemainingPayment = catchAsync(async (req, res) => {
   const { orderId } = req.params

@@ -9,6 +9,7 @@ import {
   deleteOrder,
   getOrderStats,
   trackOrder,
+  trackOrdersByPhone,
   getRemainingPayment,
   markRemainingPaymentAsPaid,
   updateOrderPayment,
@@ -31,6 +32,7 @@ router.get('/stats', getOrderStats)
 
 // Public order tracking (no authentication required)
 router.get('/track/:orderId', trackOrder)
+router.get('/track-by-phone', trackOrdersByPhone)
 
 // Remaining payment routes (admin only)
 router.get('/:orderId/remaining-payment', protectAdmin, getRemainingPayment)

@@ -1,4 +1,5 @@
 import Product from '../../models/Product.js'
+import Category from '../../models/Category.js'
 import cloudinary from 'cloudinary'
 import { sendSuccess, sendError, catchAsync } from '../../utils/errorHandler.js'
 import { validateProduct } from '../../utils/validation.js'
@@ -636,9 +637,23 @@ export const getSimilarProducts = catchAsync(async (req, res) => {
   
   console.log('Cache miss, fetching from database:', category)
   
+  // Build query that handles both ObjectId and category name
+  let categoryQuery = category
+  // Check if category is a valid ObjectId format
+  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(category)
+  
+  if (!isValidObjectId) {
+    // If not ObjectId, treat as category name and find by populated category
+    const categoryDoc = await Category.findOne({ name: category })
+    if (!categoryDoc) {
+      return sendSuccess(res, []) // Return empty if category not found
+    }
+    categoryQuery = categoryDoc._id
+  }
+  
   // Optimized query: only essential fields, limit results, exclude current product
   const products = await Product.find({
-    category,
+    category: categoryQuery,
     _id: { $ne: id }, // Exclude current product
     $or: [
       { isActive: true },

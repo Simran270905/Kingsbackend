@@ -339,26 +339,77 @@ export const createOrder = catchAsync(async (req, res) => {
   // Skip user population for guest checkout
   // await order.populate('userId', 'name email mobile')
 
-  // Create shipment with Shiprocket
-  try {
-    console.log('🚀 Creating shipment with Shiprocket for order:', order._id)
-    const shipmentResult = await shiprocketService.createOrder(order)
+  // Create shipment with Shiprocket ONLY after confirmed payment
+  // Run asynchronously to avoid blocking the order creation response
+  if (order.paymentStatus === 'paid') {
+    // Trigger Shiprocket creation asynchronously
+    setImmediate(async () => {
+      try {
+        console.log('� Payment confirmed - Creating shipment with Shiprocket for order:', order._id)
+        
+        // Prepare order data for Shiprocket
+        const orderDataForShiprocket = {
+          _id: order._id,
+          items: order.items,
+          shippingAddress: {
+            firstName: order.guestInfo?.firstName || order.customer?.firstName,
+            lastName: order.guestInfo?.lastName || order.customer?.lastName || '',
+            streetAddress: order.guestInfo?.streetAddress || order.customer?.streetAddress,
+            city: order.guestInfo?.city || order.customer?.city,
+            state: order.guestInfo?.state || order.customer?.state,
+            zipCode: order.guestInfo?.zipCode || order.customer?.zipCode,
+            mobile: order.guestInfo?.mobile || order.customer?.mobile,
+            email: order.guestInfo?.email || order.customer?.email
+          },
+          paymentMethod: order.paymentMethod,
+          totalAmount: order.totalAmount,
+          notes: order.notes
+        }
 
-    if (shipmentResult.status === 'created') {
-      order.shipmentId = shipmentResult.shipmentId
-      order.trackingUrl = shipmentResult.trackingUrl
-      order.shippingStatus = 'created'
-      order.trackingNumber = shipmentResult.shipmentId.toString()
-      await order.save()
-      console.log('✅ Shipment created successfully:', shipmentResult.shipmentId)
-    } else {
-      order.shippingStatus = 'failed'
-      await order.save()
-      console.log('❌ Shipment creation failed, marked as pending')
-    }
-  } catch (error) {
-    console.error('❌ Shiprocket integration error:', error.message)
-    order.shippingStatus = 'failed'
+        const shipmentResult = await shiprocketService.createOrder(orderDataForShiprocket)
+
+        // Update order with shipment result
+        const updatedOrder = await Order.findById(order._id)
+        
+        if (shipmentResult.status === 'created') {
+          updatedOrder.shipmentId = shipmentResult.shipmentId
+          updatedOrder.trackingUrl = shipmentResult.trackingUrl
+          updatedOrder.shippingStatus = 'created'
+          updatedOrder.trackingNumber = shipmentResult.shipmentId.toString()
+          updatedOrder.awbCode = shipmentResult.shipmentId.toString()
+          updatedOrder.courierName = shipmentResult.courierName
+          updatedOrder.estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+          updatedOrder.shiprocketError = null // Clear any previous errors
+          console.log('✅ Shipment created successfully:', shipmentResult.shipmentId)
+        } else {
+          // Store detailed error information
+          updatedOrder.shippingStatus = 'failed'
+          updatedOrder.shiprocketError = JSON.stringify(shipmentResult)
+          updatedOrder.shiprocketRetries = (updatedOrder.shiprocketRetries || 0) + 1
+          updatedOrder.lastShiprocketRetry = new Date()
+          console.log('❌ Shipment creation failed, stored error details:', shipmentResult.error)
+        }
+        
+        await updatedOrder.save()
+      } catch (error) {
+        console.error('❌ Shiprocket integration error:', error.message)
+        
+        // Update order with error details
+        const failedOrder = await Order.findById(order._id)
+        failedOrder.shippingStatus = 'failed'
+        failedOrder.shiprocketError = JSON.stringify({
+          error: error.message,
+          timestamp: new Date().toISOString(),
+          type: 'integration_error'
+        })
+        failedOrder.shiprocketRetries = (failedOrder.shiprocketRetries || 0) + 1
+        failedOrder.lastShiprocketRetry = new Date()
+        await failedOrder.save()
+      }
+    })
+  } else {
+    console.log(`⏸️ Payment status is '${order.paymentStatus}' - skipping Shiprocket creation for order: ${order._id}`)
+    order.shippingStatus = 'pending_payment'
     await order.save()
   }
 
@@ -829,8 +880,29 @@ export const createShiprocketOrder = catchAsync(async (req, res) => {
     return sendError(res, 'Order not found', 404)
   }
 
+  // Check if payment is confirmed before creating Shiprocket order
+  if (order.paymentStatus !== 'paid') {
+    return sendError(res, `Cannot create shipment: Payment status is '${order.paymentStatus}'. Payment must be 'paid' to create shipment.`, 400)
+  }
+
   try {
-    console.log('Creating Shiprocket order for:', order._id)
+    console.log('🚀 Creating Shiprocket order for:', order._id)
+    
+    // Check retry limits
+    if (order.shiprocketRetries >= 3) {
+      return sendError(res, 'Maximum retry attempts (3) exceeded. Please contact support.', 429)
+    }
+
+    // Check if enough time has passed since last retry (2 minutes)
+    if (order.lastShiprocketRetry) {
+      const timeSinceLastRetry = Date.now() - order.lastShiprocketRetry.getTime()
+      const minRetryInterval = 2 * 60 * 1000 // 2 minutes
+      
+      if (timeSinceLastRetry < minRetryInterval) {
+        const waitTime = Math.ceil((minRetryInterval - timeSinceLastRetry) / 1000)
+        return sendError(res, `Please wait ${waitTime} seconds before retrying.`, 429)
+      }
+    }
     
     // Create proper order data structure for Shiprocket service
     const orderDataForShiprocket = {
@@ -863,10 +935,12 @@ export const createShiprocketOrder = catchAsync(async (req, res) => {
       order.shiprocketOrderId = shiprocketResult.shipmentId // Use shipment ID as order ID
       order.shippingStatus = 'created'
       order.estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+      order.shiprocketError = null // Clear any previous errors
+      order.shiprocketRetries = 0 // Reset retry count on success
       
       await order.save()
       
-      console.log('Shiprocket order created successfully:', shiprocketResult.shipmentId)
+      console.log('✅ Shiprocket order created successfully:', shiprocketResult.shipmentId)
       
       sendSuccess(res, {
         shipmentId: shiprocketResult.shipmentId,
@@ -877,11 +951,32 @@ export const createShiprocketOrder = catchAsync(async (req, res) => {
         message: 'Shiprocket order created successfully'
       })
     } else {
-      console.error('Shiprocket order creation failed:', shiprocketResult.error)
+      // Store error details
+      order.shippingStatus = 'failed'
+      order.shiprocketError = JSON.stringify(shiprocketResult)
+      order.shiprocketRetries = (order.shiprocketRetries || 0) + 1
+      order.lastShiprocketRetry = new Date()
+      
+      await order.save()
+      
+      console.error('❌ Shiprocket order creation failed:', shiprocketResult.error)
       sendError(res, shiprocketResult.error || 'Failed to create Shiprocket order', 500)
     }
   } catch (error) {
-    console.error('Error creating Shiprocket order:', error)
+    console.error('❌ Error creating Shiprocket order:', error.message)
+    
+    // Update order with error details
+    order.shippingStatus = 'failed'
+    order.shiprocketError = JSON.stringify({
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      type: 'api_error'
+    })
+    order.shiprocketRetries = (order.shiprocketRetries || 0) + 1
+    order.lastShiprocketRetry = new Date()
+    
+    await order.save()
+    
     sendError(res, error.message || 'Failed to create Shiprocket order', 500)
   }
 })
@@ -918,5 +1013,103 @@ export const getShipmentTracking = catchAsync(async (req, res) => {
   } catch (error) {
     console.error('Error getting tracking:', error)
     sendError(res, error.message || 'Failed to get tracking information', 500)
+  }
+})
+
+// Retry Shiprocket order creation
+export const retryShiprocketOrder = catchAsync(async (req, res) => {
+  const { id } = req.params
+
+  if (!id) {
+    return sendError(res, 'Order ID is required', 400)
+  }
+
+  const order = await Order.findById(id)
+  
+  if (!order) {
+    return sendError(res, 'Order not found', 404)
+  }
+
+  // Check if payment is confirmed
+  if (order.paymentStatus !== 'paid') {
+    return sendError(res, `Cannot retry shipment: Payment status is '${order.paymentStatus}'. Payment must be 'paid' to create shipment.`, 400)
+  }
+
+  try {
+    console.log('🔄 Retrying Shiprocket order creation for:', order._id)
+    
+    // Check retry limits
+    if (order.shiprocketRetries >= 3) {
+      return sendError(res, 'Maximum retry attempts (3) exceeded. Please contact support.', 429)
+    }
+
+    // Check if enough time has passed since last retry (2 minutes)
+    if (order.lastShiprocketRetry) {
+      const timeSinceLastRetry = Date.now() - order.lastShiprocketRetry.getTime()
+      const minRetryInterval = 2 * 60 * 1000 // 2 minutes
+      
+      if (timeSinceLastRetry < minRetryInterval) {
+        const waitTime = Math.ceil((minRetryInterval - timeSinceLastRetry) / 1000)
+        return sendError(res, `Please wait ${waitTime} seconds before retrying.`, 429)
+      }
+    }
+    
+    // Use the retry mechanism from the service
+    const result = await shiprocketService.retryOrderCreation(order)
+    
+    if (result.status === 'created') {
+      // Update order with shipment details
+      order.shipmentId = result.shipmentId
+      order.trackingNumber = result.shipmentId
+      order.awbCode = result.shipmentId
+      order.trackingUrl = result.trackingUrl
+      order.courierName = result.courierName || 'Partner Courier'
+      order.shiprocketOrderId = result.shipmentId
+      order.shippingStatus = 'created'
+      order.estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+      order.shiprocketError = null // Clear any previous errors
+      order.shiprocketRetries = 0 // Reset retry count on success
+      
+      await order.save()
+      
+      console.log('✅ Shiprocket retry successful:', result.shipmentId)
+      
+      sendSuccess(res, {
+        shipmentId: result.shipmentId,
+        trackingNumber: result.shipmentId,
+        awbCode: result.shipmentId,
+        trackingUrl: result.trackingUrl,
+        courierName: result.courierName || 'Partner Courier',
+        shippingStatus: 'created',
+        message: 'Shiprocket order created successfully on retry'
+      })
+    } else {
+      // Update order with error details
+      order.shippingStatus = 'failed'
+      order.shiprocketError = JSON.stringify(result)
+      order.shiprocketRetries = (order.shiprocketRetries || 0) + 1
+      order.lastShiprocketRetry = new Date()
+      
+      await order.save()
+      
+      console.error('❌ Shiprocket retry failed:', result.error)
+      sendError(res, result.error || 'Failed to retry Shiprocket order', 500)
+    }
+  } catch (error) {
+    console.error('❌ Error retrying Shiprocket order:', error.message)
+    
+    // Update order with error details
+    order.shippingStatus = 'failed'
+    order.shiprocketError = JSON.stringify({
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      type: 'retry_error'
+    })
+    order.shiprocketRetries = (order.shiprocketRetries || 0) + 1
+    order.lastShiprocketRetry = new Date()
+    
+    await order.save()
+    
+    sendError(res, error.message || 'Failed to retry Shiprocket order', 500)
   }
 })

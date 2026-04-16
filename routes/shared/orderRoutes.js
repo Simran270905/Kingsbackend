@@ -14,7 +14,8 @@ import {
   markRemainingPaymentAsPaid,
   updateOrderPayment,
   createShiprocketOrder,
-  getShipmentTracking
+  getShipmentTracking,
+  retryShiprocketOrder
 } from '../../controllers/shared/orderController.js'
 import {
   markCODOrderAsPaid,
@@ -55,6 +56,7 @@ router.patch('/:id/payment', updateOrderPayment)
 
 // Shiprocket integration routes
 router.post('/:id/shiprocket', createShiprocketOrder)
+router.post('/:id/shiprocket/retry', protectAdmin, retryShiprocketOrder)
 router.get('/:id/tracking', getShipmentTracking)
 
 // Protected routes (admin only)

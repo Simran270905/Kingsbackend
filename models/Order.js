@@ -356,6 +356,25 @@ const orderSchema = new mongoose.Schema(
       default: 0,
       min: 0,
       comment: 'COD handling charge (₹150 for COD orders, 0 for others)'
+    },
+    // Shiprocket error tracking field
+    shiprocketError: {
+      type: String,
+      default: null,
+      comment: 'Stores Shiprocket API error details for debugging'
+    },
+    // Shiprocket retry tracking
+    shiprocketRetries: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 3,
+      comment: 'Number of Shiprocket retry attempts made'
+    },
+    lastShiprocketRetry: {
+      type: Date,
+      default: null,
+      comment: 'Timestamp of last Shiprocket retry attempt'
     }
   },
   { timestamps: true }

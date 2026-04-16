@@ -16,11 +16,15 @@ const safeLoginGuard = () => {
   lastLoginAttempt = now
 }
 
-// Safe token management with caching
+// Enhanced token management with proactive expiry validation
 const getShiprocketToken = async () => {
-  // Use cached token if valid
-  if (shiprocketToken && Date.now() < tokenExpiry) {
-    console.log('Using cached Shiprocket token')
+  const now = Date.now()
+  
+  // Check if token is expired or will expire within 5 minutes (300000 ms)
+  const fiveMinutesFromNow = now + 300000
+  
+  if (shiprocketToken && tokenExpiry && now < tokenExpiry && tokenExpiry > fiveMinutesFromNow) {
+    console.log('✅ Using valid Shiprocket token (expires in:', Math.floor((tokenExpiry - now) / 60000), 'minutes)')
     return shiprocketToken
   }
 
@@ -28,7 +32,15 @@ const getShiprocketToken = async () => {
   safeLoginGuard()
 
   try {
-    console.log('Authenticating with Shiprocket API...')
+    console.log('🔐 Authenticating with Shiprocket API...')
+    
+    // Validate environment variables first
+    if (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD) {
+      throw new Error('Shiprocket credentials not configured in environment variables')
+    }
+    
+    console.log('🔍 Shiprocket credentials validation passed')
+    
     const response = await axios.post(
       `${SHIPROCKET_BASE_URL}/external/auth/login`,
       {
@@ -41,25 +53,30 @@ const getShiprocketToken = async () => {
     )
 
     if (!response.data || !response.data.token) {
-      console.error('Shiprocket authentication failed: Invalid credentials')
-      throw new Error('Shiprocket authentication failed: Invalid credentials')
+      console.error('❌ Shiprocket authentication failed: Invalid response format')
+      throw new Error('Shiprocket authentication failed: Invalid response format')
     }
 
     // Cache the token globally (ensure clean token without whitespace)
     shiprocketToken = response.data.token.trim()
-    // Token valid for 240 hours (10 days)
-    tokenExpiry = Date.now() + (240 * 60 * 60 * 1000)
+    // Shiprocket tokens typically expire in 24 hours, but we'll use 23 hours for safety
+    tokenExpiry = now + (23 * 60 * 60 * 1000)
     
-    console.log('Shiprocket authentication successful')
-    console.log('Token expires in:', new Date(tokenExpiry))
-    console.log('Token length:', shiprocketToken.length)
+    console.log('✅ Shiprocket authentication successful')
+    console.log('🕐 Token expires at:', new Date(tokenExpiry))
+    console.log('🔑 Token length:', shiprocketToken.length)
     return shiprocketToken
 
   } catch (error) {
-    console.error('Shiprocket login failed:', error.response?.data?.message || error.message)
+    console.error('❌ Shiprocket login failed:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: `${SHIPROCKET_BASE_URL}/external/auth/login`
+    })
     
     // DO NOT RETRY - Fail fast to prevent account blocking
-    throw new Error('Shiprocket authentication failed')
+    throw new Error(`Shiprocket authentication failed: ${error.response?.data?.message || error.message}`)
   }
 }
 
@@ -69,9 +86,11 @@ class ShiprocketService {
   }
 
   validateConfig() {
-    if (!process.env.SHIPROCKET_API_KEY && (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD)) {
-      throw new Error('Shiprocket API key or email/password is not configured. Please set SHIPROCKET_API_KEY or SHIPROCKET_API_EMAIL and SHIPROCKET_API_PASSWORD in environment variables.')
+    if (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD) {
+      throw new Error('Shiprocket API email and password are not configured. Please set SHIPROCKET_API_EMAIL and SHIPROCKET_API_PASSWORD in environment variables.')
     }
+    
+    console.log('✅ Shiprocket configuration validated')
   }
 
   async authenticate() {
@@ -114,6 +133,8 @@ class ShiprocketService {
   }
 
   async createOrder(orderData) {
+    const startTime = Date.now()
+    
     try {
       this.validateOrderData(orderData)
       const token = await this.getToken()
@@ -169,7 +190,12 @@ class ShiprocketService {
         weight: Math.max(totalWeight, 0.5) // Minimum 0.5kg
       }
 
-      console.log('Creating Shiprocket order with payload:', JSON.stringify(payload, null, 2))
+      console.log('📦 Creating Shiprocket order:', {
+        orderId: payload.order_id,
+        itemCount: payload.order_items.length,
+        totalAmount: payload.sub_total,
+        paymentMethod: payload.payment_method
+      })
 
       const response = await axios.post(
         `${SHIPROCKET_BASE_URL}/external/orders/create/adhoc`,
@@ -183,52 +209,89 @@ class ShiprocketService {
         }
       )
 
-      console.log('🔍 DEBUG - Shiprocket API response:', JSON.stringify(response.data, null, 2))
+      const duration = Date.now() - startTime
+      console.log(`✅ Shiprocket API call completed in ${duration}ms`)
+      console.log('🔍 Shiprocket response:', {
+        status: response.data.status,
+        statusCode: response.data.status_code,
+        shipmentId: response.data.shipment_id,
+        courierName: response.data.courier_name
+      })
 
       if (!response.data) {
-        throw new Error('Invalid response from Shiprocket')
+        throw new Error('Invalid response from Shiprocket: Empty response body')
       }
 
       // Check for CANCELED status
       if (response.data.status === 'CANCELED' || response.data.status_code === 5) {
-        console.warn('⚠️ Shiprocket order was CANCELED. Possible reasons:');
-        console.warn('- Invalid pickup location');
-        console.warn('- Service not available for pincode');
-        console.warn('- Account issues');
-        console.warn('- Invalid channel ID');
+        const cancelReason = {
+          message: 'Shiprocket order was CANCELED',
+          possibleReasons: [
+            'Invalid pickup location',
+            'Service not available for pincode',
+            'Account issues',
+            'Invalid channel ID',
+            'Weight/dimension issues'
+          ],
+          response: response.data
+        }
+        console.warn('⚠️ Shiprocket order CANCELED:', cancelReason)
+        throw new Error(`Shiprocket order canceled: ${JSON.stringify(cancelReason)}`)
       }
 
       // Handle different response field names
       const shipmentId = response.data.shipment_id || response.data.shipment_id || response.data.id
-      console.log('🔍 DEBUG - Extracted shipmentId:', shipmentId)
       
       if (!shipmentId) {
-        throw new Error('No shipment ID in Shiprocket response')
+        throw new Error(`No shipment ID in Shiprocket response. Response: ${JSON.stringify(response.data)}`)
       }
 
       const result = {
         shipmentId: shipmentId,
         trackingUrl: `https://shiprocket.co/tracking/${shipmentId}`,
-        status: response.data.status === 'CANCELED' ? 'failed' : 'created',
+        status: 'created',
         courierName: response.data.courier_name || response.data.courier_name || 'Partner Courier',
         estimatedDelivery: response.data.estimated_delivery_days || response.data.estimated_delivery_days || '5-7 working days',
         shiprocketStatus: response.data.status,
-        shiprocketStatusCode: response.data.status_code
+        shiprocketStatusCode: response.data.status_code,
+        responseTime: duration
       }
 
-      console.log('Shiprocket order created successfully:', result)
-      return result
-    } catch (error) {
-      console.error('Shiprocket order creation failed:', error.response?.data || error.message)
+      console.log('🚀 Shiprocket order created successfully:', {
+        shipmentId: result.shipmentId,
+        trackingUrl: result.trackingUrl,
+        courierName: result.courierName,
+        responseTime: result.responseTime
+      })
       
-      // Return detailed error information
+      return result
+      
+    } catch (error) {
+      const duration = Date.now() - startTime
+      
+      // Comprehensive error logging
       const errorDetails = {
         status: 'failed',
         error: error.response?.data?.message || error.message,
         details: error.response?.data || null,
-        code: error.response?.status || 500
+        code: error.response?.status || 500,
+        responseTime: duration,
+        timestamp: new Date().toISOString(),
+        orderId: orderData._id,
+        url: `${SHIPROCKET_BASE_URL}/external/orders/create/adhoc`
       }
       
+      console.error('❌ Shiprocket order creation failed:', {
+        ...errorDetails,
+        axiosError: {
+          message: error.message,
+          code: error.code,
+          errno: error.errno,
+          syscall: error.syscall
+        }
+      })
+      
+      // Return detailed error information for storage in order
       return errorDetails
     }
   }
@@ -253,13 +316,27 @@ class ShiprocketService {
 
       return {
         success: true,
-        data: response.data
+        data: response.data,
+        trackingData: {
+          shipmentId,
+          status: response.data.tracking_data?.shipment_status,
+          awbCode: response.data.tracking_data?.awb_code,
+          courierName: response.data.tracking_data?.courier_name,
+          estimatedDelivery: response.data.tracking_data?.estimated_delivery,
+          trackingHistory: response.data.tracking_data?.tracking_data || []
+        }
       }
     } catch (error) {
-      console.error('Shiprocket tracking failed:', error.response?.data || error.message)
+      console.error('❌ Shiprocket tracking failed:', {
+        shipmentId,
+        error: error.response?.data?.message || error.message,
+        status: error.response?.status,
+        timestamp: new Date().toISOString()
+      })
       return {
         success: false,
-        error: error.response?.data?.message || error.message
+        error: error.response?.data?.message || error.message,
+        details: error.response?.data || null
       }
     }
   }
@@ -285,16 +362,96 @@ class ShiprocketService {
       return {
         success: true,
         awbNumber: response.data.awb_code,
-        courierName: response.data.courier_name
+        courierName: response.data.courier_name,
+        responseData: response.data
       }
     } catch (error) {
-      console.error('Failed to get AWB number:', error.response?.data || error.message)
+      console.error('❌ Failed to get AWB number:', {
+        shipmentId,
+        error: error.response?.data?.message || error.message,
+        status: error.response?.status,
+        timestamp: new Date().toISOString()
+      })
       return {
         success: false,
-        error: error.response?.data?.message || error.message
+        error: error.response?.data?.message || error.message,
+        details: error.response?.data || null
       }
     }
   }
+
+  // Retry mechanism for failed orders
+  async retryOrderCreation(order, maxRetries = 3) {
+    if (order.shiprocketRetries >= maxRetries) {
+      throw new Error(`Maximum retry attempts (${maxRetries}) exceeded for order ${order._id}`)
+    }
+
+    // Check if enough time has passed since last retry (2 minutes)
+    const now = new Date()
+    if (order.lastShiprocketRetry) {
+      const timeSinceLastRetry = now - order.lastShiprocketRetry
+      const minRetryInterval = 2 * 60 * 1000 // 2 minutes
+      
+      if (timeSinceLastRetry < minRetryInterval) {
+        const waitTime = Math.ceil((minRetryInterval - timeSinceLastRetry) / 1000)
+        throw new Error(`Please wait ${waitTime} seconds before retrying order ${order._id}`)
+      }
+    }
+
+    // Prepare order data for Shiprocket
+    const orderData = {
+      _id: order._id,
+      items: order.items,
+      shippingAddress: {
+        firstName: order.guestInfo?.firstName || order.customer?.firstName,
+        lastName: order.guestInfo?.lastName || order.customer?.lastName || '',
+        streetAddress: order.guestInfo?.streetAddress || order.customer?.streetAddress,
+        city: order.guestInfo?.city || order.customer?.city,
+        state: order.guestInfo?.state || order.customer?.state,
+        zipCode: order.guestInfo?.zipCode || order.customer?.zipCode,
+        mobile: order.guestInfo?.mobile || order.customer?.mobile,
+        email: order.guestInfo?.email || order.customer?.email
+      },
+      paymentMethod: order.paymentMethod,
+      totalAmount: order.totalAmount,
+      notes: order.notes
+    }
+
+    console.log(`🔄 Retrying Shiprocket order creation for ${order._id} (attempt ${order.shiprocketRetries + 1}/${maxRetries})`)
+
+    const result = await this.createOrder(orderData)
+    
+    if (result.status === 'created') {
+      // Clear error on successful retry
+      order.shiprocketError = null
+      console.log(`✅ Retry successful for order ${order._id}`)
+    } else {
+      // Store error details
+      order.shiprocketError = JSON.stringify(result)
+      console.log(`❌ Retry failed for order ${order._id}:`, result.error)
+    }
+
+    return result
+  }
 }
+
+// Production startup validation
+const validateShiprocketConfig = () => {
+  try {
+    if (!process.env.SHIPROCKET_API_EMAIL || !process.env.SHIPROCKET_API_PASSWORD) {
+      console.warn('⚠️ Shiprocket credentials not configured - Shiprocket integration will be disabled')
+      return false
+    }
+    
+    console.log('✅ Shiprocket credentials loaded and validated')
+    return true
+  } catch (error) {
+    console.error('❌ Shiprocket configuration validation failed:', error.message)
+    return false
+  }
+}
+
+// Validate configuration on startup
+validateShiprocketConfig()
 
 export default new ShiprocketService()

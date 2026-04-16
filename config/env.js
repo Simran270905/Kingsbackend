@@ -26,7 +26,8 @@ const optionalEnvVars = [
   { key: 'RAZORPAY_KEY_ID', message: 'Razorpay payment gateway will not be available' },
   { key: 'RAZORPAY_KEY_SECRET', message: 'Razorpay payment gateway will not be available' },
   { key: 'SHIPROCKET_EMAIL', message: 'Shiprocket shipping service will not be available' },
-  { key: 'SHIPROCKET_PASSWORD', message: 'Shiprocket shipping service will not be available' }
+  { key: 'SHIPROCKET_PASSWORD', message: 'Shiprocket shipping service will not be available' },
+  { key: 'PRODUCTION_URL', message: 'Production URL callbacks will use localhost' }
 ]
 
 optionalEnvVars.forEach(({ key, message }) => {
@@ -46,6 +47,12 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
 
 if (process.env.SHIPROCKET_EMAIL && process.env.SHIPROCKET_PASSWORD) {
   console.log('✅ Shiprocket credentials loaded successfully')
+}
+
+if (process.env.PRODUCTION_URL) {
+  console.log('✅ Production URL loaded successfully')
+} else {
+  console.warn('⚠️ PRODUCTION_URL not set - using localhost for callbacks')
 }
 
 // Export configuration object
@@ -79,7 +86,8 @@ export const config = {
   urls: {
     frontend: process.env.FRONTEND_URL,
     api: process.env.API_URL,
-    development: process.env.DEVELOPMENT_URL || 'http://localhost:5173'
+    development: process.env.DEVELOPMENT_URL || 'http://localhost:5173',
+    production: process.env.PRODUCTION_URL || 'http://localhost:5000'
   }
 }
 

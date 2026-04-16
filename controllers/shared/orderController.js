@@ -750,72 +750,48 @@ export const createShiprocketOrder = catchAsync(async (req, res) => {
   try {
     console.log('Creating Shiprocket order for:', order._id)
     
-    const shipmentData = {
-      order_id: order._id,
-      order_date: order.createdAt,
-      pickup_location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary',
-      channel_id: process.env.SHIPROCKET_CHANNEL_ID,
-      comment: order.notes || '',
-      billing_customer_name: order.customer.firstName,
-      billing_last_name: order.customer.lastName || '',
-      billing_address: order.customer.streetAddress,
-      billing_address_2: '',
-      billing_city: order.customer.city,
-      billing_pincode: order.customer.zipCode,
-      billing_state: order.customer.state,
-      billing_country: 'India',
-      billing_email: order.customer.email,
-      billing_phone: order.customer.mobile,
-      shipping_is_billing: true,
-      shipping_customer_name: order.customer.firstName,
-      shipping_last_name: order.customer.lastName || '',
-      shipping_address: order.customer.streetAddress,
-      shipping_address_2: '',
-      shipping_city: order.customer.city,
-      shipping_pincode: order.customer.zipCode,
-      shipping_state: order.customer.state,
-      shipping_country: 'India',
-      shipping_email: order.customer.email,
-      shipping_phone: order.customer.mobile,
-      order_items: order.items.map(item => ({
-        name: item.name,
-        sku: item.productId || item.id,
-        units: item.quantity,
-        selling_price: item.price,
-        discount: '',
-        tax: '',
-        hsn: ''
-      })),
-      payment_method: order.paymentMethod === 'cod' ? 'COD' : 'Prepaid',
-      shipping_charges: 0,
-      giftwrap_charges: 0,
-      transaction_charges: 0,
-      total_discount: 0,
-      sub_total: order.totalAmount,
-      length: 10,
-      breadth: 10,
-      height: 5,
-      weight: 0.5
-    }
+    // Create proper order data structure for Shiprocket service
+    const orderDataForShiprocket = {
+      _id: order._id,
+      items: order.items,
+      shippingAddress: {
+        firstName: order.guestInfo?.firstName || order.customer?.firstName,
+        lastName: order.guestInfo?.lastName || order.customer?.lastName || '',
+        streetAddress: order.guestInfo?.streetAddress || order.customer?.streetAddress,
+        city: order.guestInfo?.city || order.customer?.city,
+        state: order.guestInfo?.state || order.customer?.state,
+        zipCode: order.guestInfo?.zipCode || order.customer?.zipCode,
+        mobile: order.guestInfo?.mobile || order.customer?.mobile,
+        email: order.guestInfo?.email || order.customer?.email
+      },
+      paymentMethod: order.paymentMethod,
+      totalAmount: order.totalAmount,
+      notes: order.notes
+    };
 
-    const shiprocketResult = await shiprocketService.createOrder(shipmentData)
+    const shiprocketResult = await shiprocketService.createOrder(orderDataForShiprocket)
     
-    if (shiprocketResult.success) {
+    if (shiprocketResult.status === 'created') {
       // Update order with shipment details
-      order.shipmentId = shiprocketResult.shipment_id
-      order.trackingNumber = shiprocketResult.awb_code
-      order.trackingUrl = shiprocketResult.tracking_url
+      order.shipmentId = shiprocketResult.shipmentId
+      order.trackingNumber = shiprocketResult.shipmentId
+      order.awbCode = shiprocketResult.shipmentId // AWB code is the shipment ID
+      order.trackingUrl = shiprocketResult.trackingUrl
+      order.courierName = shiprocketResult.courierName || 'Partner Courier'
+      order.shiprocketOrderId = shiprocketResult.shipmentId // Use shipment ID as order ID
       order.shippingStatus = 'created'
       order.estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       
       await order.save()
       
-      console.log('Shiprocket order created successfully:', shiprocketResult.shipment_id)
+      console.log('Shiprocket order created successfully:', shiprocketResult.shipmentId)
       
       sendSuccess(res, {
-        shipmentId: shiprocketResult.shipment_id,
-        trackingNumber: shiprocketResult.awb_code,
-        trackingUrl: shiprocketResult.tracking_url,
+        shipmentId: shiprocketResult.shipmentId,
+        trackingNumber: shiprocketResult.shipmentId,
+        awbCode: shiprocketResult.shipmentId,
+        trackingUrl: shiprocketResult.trackingUrl,
+        courierName: shiprocketResult.courierName || 'Partner Courier',
         message: 'Shiprocket order created successfully'
       })
     } else {

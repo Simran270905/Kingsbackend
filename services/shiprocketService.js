@@ -45,13 +45,14 @@ const getShiprocketToken = async () => {
       throw new Error('Shiprocket authentication failed: Invalid credentials')
     }
 
-    // Cache the token globally
-    shiprocketToken = response.data.token
+    // Cache the token globally (ensure clean token without whitespace)
+    shiprocketToken = response.data.token.trim()
     // Token valid for 240 hours (10 days)
     tokenExpiry = Date.now() + (240 * 60 * 60 * 1000)
     
     console.log('Shiprocket authentication successful')
     console.log('Token expires in:', new Date(tokenExpiry))
+    console.log('Token length:', shiprocketToken.length)
     return shiprocketToken
 
   } catch (error) {
@@ -188,6 +189,15 @@ class ShiprocketService {
         throw new Error('Invalid response from Shiprocket')
       }
 
+      // Check for CANCELED status
+      if (response.data.status === 'CANCELED' || response.data.status_code === 5) {
+        console.warn('⚠️ Shiprocket order was CANCELED. Possible reasons:');
+        console.warn('- Invalid pickup location');
+        console.warn('- Service not available for pincode');
+        console.warn('- Account issues');
+        console.warn('- Invalid channel ID');
+      }
+
       // Handle different response field names
       const shipmentId = response.data.shipment_id || response.data.shipment_id || response.data.id
       console.log('🔍 DEBUG - Extracted shipmentId:', shipmentId)
@@ -199,9 +209,11 @@ class ShiprocketService {
       const result = {
         shipmentId: shipmentId,
         trackingUrl: `https://shiprocket.co/tracking/${shipmentId}`,
-        status: 'created',
+        status: response.data.status === 'CANCELED' ? 'failed' : 'created',
         courierName: response.data.courier_name || response.data.courier_name || 'Partner Courier',
-        estimatedDelivery: response.data.estimated_delivery_days || response.data.estimated_delivery_days || '5-7 working days'
+        estimatedDelivery: response.data.estimated_delivery_days || response.data.estimated_delivery_days || '5-7 working days',
+        shiprocketStatus: response.data.status,
+        shiprocketStatusCode: response.data.status_code
       }
 
       console.log('Shiprocket order created successfully:', result)

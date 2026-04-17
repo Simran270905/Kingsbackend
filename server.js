@@ -59,6 +59,7 @@ import { createRateLimiter } from './middleware/auth.js'
 // Import routes (using the proper structure)
 import routes from './routes/index.js'
 import customerRoutes from './routes/customer/index.js'
+import shiprocketTestRoutes from './routes/shiprocketTestRoutes.js'
 
 // Import quick fix controller
 import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/shared/quickFixController.js'
@@ -128,6 +129,10 @@ app.use('/api', routes)
 // Direct customer routes for frontend compatibility
 console.log(' Direct customer routes for frontend compatibility')
 app.use('/customers', customerRoutes)
+
+// Shiprocket test routes
+console.log(' Mounting Shiprocket test routes at /api')
+app.use('/api', shiprocketTestRoutes)
 
 //  ADDED: Debug route to test server
 app.get('/api/debug/routes', (req, res) => {

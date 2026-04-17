@@ -204,23 +204,42 @@ class ShiprocketService {
     if (!orderData.shippingAddress) {
       throw new Error('Shipping address is required')
     }
-
-    const requiredAddressFields = ['firstName', 'lastName', 'streetAddress', 'city', 'state', 'zipCode', 'mobile']
-    for (const field of requiredAddressFields) {
+    
+    // Validate required fields
+    const required = ['firstName', 'lastName', 'email', 'mobile', 'streetAddress', 'city', 'state', 'zipCode']
+    for (const field of required) {
       if (!orderData.shippingAddress[field]) {
-        throw new Error(`${field} is required in shipping address`)
+        throw new Error(`Shipping address field ${field} is required`)
       }
     }
-
-    // Validate pincode (should be 6 digits)
-    if (!/^[0-9]{6}$/.test(orderData.shippingAddress.zipCode)) {
-      throw new Error('Invalid pincode format. Should be 6 digits.')
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(orderData.shippingAddress.email)) {
+      throw new Error('Invalid email format')
     }
-
-    // Validate mobile (should be 10 digits)
-    if (!/^[0-9]{10}$/.test(orderData.shippingAddress.mobile)) {
-      throw new Error('Invalid mobile number format. Should be 10 digits.')
+    
+    // Clean and validate mobile number
+    const originalMobile = orderData.shippingAddress.mobile.toString()
+    let cleanMobile = originalMobile.replace(/\D/g, '') // Remove all non-digits
+    
+    // Handle different formats
+    if (cleanMobile.startsWith('91') && cleanMobile.length === 12) {
+      // Remove country code 91
+      cleanMobile = cleanMobile.substring(2)
+    } else if (cleanMobile.startsWith('0') && cleanMobile.length === 11) {
+      // Remove leading 0
+      cleanMobile = cleanMobile.substring(1)
     }
+    
+    // Validate final format (should be 10 digits)
+    if (!/^[0-9]{10}$/.test(cleanMobile)) {
+      throw new Error(`Invalid mobile number format: "${originalMobile}". Should be 10 digits after cleaning.`)
+    }
+    
+    // Update the mobile number with cleaned version
+    orderData.shippingAddress.mobile = cleanMobile
+    console.log(`Phone number cleaned: "${originalMobile}" -> "${cleanMobile}"`)
   }
 
   async createOrder(orderData) {

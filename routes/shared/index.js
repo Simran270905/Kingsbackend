@@ -8,7 +8,7 @@ import uploadRoutes from './uploads.js'
 // import authRoutes from './auth.js' // Removed for guest checkout
 import reviewRoutes from './reviews.js'
 import couponRoutes from './coupons.js'
-import contentRoutes from './content.js'
+import contentRoutes from './contentRoutes.js'
 import contactRoutes from '../contactRoutes.js'
 import newPaymentRoutes from '../payment.routes.js'
 

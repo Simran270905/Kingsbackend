@@ -4,8 +4,8 @@ import {
   saveContent,
   getAllContent,
   deleteContent
-} from '../controllers/contentController.js'
-import { protectAdmin } from '../middleware/authMiddleware.js'
+} from '../../controllers/shared/contentController.js'
+import { protectAdmin } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
 

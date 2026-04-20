@@ -6,7 +6,6 @@ import { protectAdmin } from '../../middleware/auth.js'
 import { getAdminAnalytics, validateRevenue } from '../../controllers/admin/adminAnalyticsController.js'
 import { sendSuccess, sendError } from '../../middleware/errorHandler.js'
 import orderRoutes from './enhancedOrderRoutes.js'
-import reportsRoutes from './reportsRoutes.js'
 
 const router = express.Router()
 
@@ -46,8 +45,5 @@ router.get('/analytics/validate-revenue', protectAdmin, validateRevenue)
 
 // New order routes
 router.use('/orders', orderRoutes)
-
-// Reports routes - Using Shared Analytics Service
-router.use('/reports', reportsRoutes)
 
 export default router

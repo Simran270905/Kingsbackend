@@ -2,6 +2,7 @@ import express from 'express'
 import adminRoutes from './admin/index.js'
 import customerRoutes from './customer/index.js'
 import sharedRoutes from './shared/index.js'
+import shiprocketWebhookRoutes from './shiprocketWebhookRoutes.js'
 
 const router = express.Router()
 
@@ -10,19 +11,50 @@ router.get('/shiprocket/health', async (req, res) => {
   try {
     const shiprocketService = (await import('../services/shiprocketService.js')).default
     
-    // Call authenticate to ensure token is fresh
-    await shiprocketService.authenticate()
+    // Test by creating a simple order (will trigger authentication)
+    const testOrder = {
+      _id: 'health-check-' + Date.now(),
+      items: [{
+        name: 'Health Check Item',
+        productId: 'health-check',
+        price: 1,
+        quantity: 1,
+        subtotal: 1
+      }],
+      shippingAddress: {
+        firstName: 'Health',
+        lastName: 'Check',
+        streetAddress: '123 Test Street',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        zipCode: '400001',
+        mobile: '9876543210',
+        email: 'health@test.com'
+      },
+      paymentMethod: 'prepaid',
+      totalAmount: 1,
+      notes: 'Health check test'
+    };
     
-    // Get token age information
-    const tokenAgeHours = Math.floor(9 * 24) // Max age is 9 days = 216 hours
+    const result = await shiprocketService.createOrder(testOrder);
     
-    res.json({
-      status: 'ok',
-      tokenAge: 'Freshly authenticated',
-      tokenMaxAge: `${tokenAgeHours} hours`,
-      timestamp: new Date().toISOString(),
-      shiprocketConnected: true
-    })
+    if (result && result.shipmentId) {
+      res.json({
+        status: 'ok',
+        tokenAge: 'Freshly authenticated',
+        tokenMaxAge: '216 hours',
+        timestamp: new Date().toISOString(),
+        shiprocketConnected: true,
+        testShipmentId: result.shipmentId
+      })
+    } else {
+      res.status(500).json({
+        status: 'error',
+        message: result?.error || 'Shiprocket connection failed',
+        timestamp: new Date().toISOString(),
+        shiprocketConnected: false
+      })
+    }
   } catch (error) {
     res.status(500).json({
       status: 'error',

@@ -127,9 +127,23 @@ const verifyPayment = async (req, res) => {
   }
 }
 
+/* PRODUCTION CHECKLIST:
+   Go to Shiprocket Dashboard → Settings → Webhooks
+   Set webhook URL to: https://<your-render-app>.onrender.com/api/payment/shiprocket/webhook
+   This MUST be updated whenever Render URL changes.
+*/
+
 // Handle Shiprocket webhook
 const handleShiprocketWebhook = async (req, res) => {
   try {
+    // Verify webhook token for security
+    const receivedToken = req.headers['x-api-key'];
+    const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN;
+
+    if (!expectedToken || receivedToken !== expectedToken) {
+      return res.status(401).json({ error: 'Unauthorized webhook request' });
+    }
+
     const { order_id, current_status, awb_code, courier_name, tracking_url } = req.body
 
     // Find order by Shiprocket order ID

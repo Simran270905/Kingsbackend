@@ -52,6 +52,24 @@ if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
   console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Set' : 'Missing')
 }
 
+// Validate Shiprocket environment variables
+if (!process.env.SHIPROCKET_EMAIL || !process.env.SHIPROCKET_PASSWORD) {
+  console.error('FATAL: SHIPROCKET_EMAIL or SHIPROCKET_PASSWORD not set in environment')
+  process.exit(1)
+} else {
+  console.log('Shiprocket credentials validated')
+  console.log('SHIPROCKET_EMAIL:', process.env.SHIPROCKET_EMAIL ? 'Set' : 'Missing')
+  console.log('SHIPROCKET_PASSWORD:', process.env.SHIPROCKET_PASSWORD ? 'Set' : 'Missing')
+}
+
+// Warn about FRONTEND_URL
+if (!process.env.FRONTEND_URL) {
+  console.warn('⚠️ FRONTEND_URL not set in environment. CORS may not work correctly in production.')
+  console.warn('Set FRONTEND_URL to your production frontend URL (e.g., https://kkingsjewellery.com)')
+} else {
+  console.log('FRONTEND_URL:', process.env.FRONTEND_URL)
+}
+
 // Import config and middleware
 import './config/cloudinary.js'
 import { createRateLimiter } from './middleware/auth.js'
@@ -63,6 +81,9 @@ import shiprocketTestRoutes from './routes/shiprocketTestRoutes.js'
 
 // Import quick fix controller
 import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/shared/quickFixController.js'
+
+// Import Shiprocket service for token warm-up
+import shiprocketService from './services/shiprocketService.js'
 
 // Initialize app
 const app = express()
@@ -86,6 +107,7 @@ app.use(cors({
     'https://kkingsjewellery.com',
     'https://api.kkingsjewellery.com',
     'https://kings-main.vercel.app',
+    process.env.FRONTEND_URL,
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:5174',
@@ -95,7 +117,7 @@ app.use(cors({
     'http://localhost:4174',
     // Allow all localhost ports for development
     /^http:\/\/localhost:\d+$/
-  ],
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -373,9 +395,19 @@ connectDB()
 
 // Start server
 const PORT = process.env.PORT || 5000
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`)
   console.log(`📝 API Documentation: http://localhost:${PORT}/api`)
+  
+  // Warm up Shiprocket token on server start
+  try {
+    console.log('🔄 Warming up Shiprocket token...')
+    await shiprocketService.authenticate()
+    console.log('✅ Shiprocket token warmed up successfully')
+  } catch (error) {
+    console.warn('⚠️ Shiprocket token warm-up failed:', error.message)
+    console.warn('Shiprocket integration will work on first request')
+  }
 })
 
 // Handle unhandled promise rejections

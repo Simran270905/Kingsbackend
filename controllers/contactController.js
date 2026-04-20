@@ -6,7 +6,10 @@ import emailService from '../services/emailService.js';
 // @access  Public
 export const createContactMessage = async (req, res) => {
   try {
-    const { fullName, email, phone, subject, message } = req.body;
+    const { name, email, phone, subject, message } = req.body;
+
+    // Map frontend field names to backend variables
+    const fullName = name;
 
     // Validation
     if (!fullName || !email || !phone || !subject || !message) {

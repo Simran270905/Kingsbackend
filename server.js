@@ -152,9 +152,9 @@ app.use('/api', routes)
 console.log(' Direct customer routes for frontend compatibility')
 app.use('/customers', customerRoutes)
 
-// Shiprocket test routes
-console.log(' Mounting Shiprocket test routes at /api')
-app.use('/api', shiprocketTestRoutes)
+// Shiprocket webhook routes
+console.log(' Mounting Shiprocket webhook routes at /api')
+app.use('/api', shiprocketWebhookRoutes)
 
 //  ADDED: Debug route to test server
 app.get('/api/debug/routes', (req, res) => {
@@ -167,7 +167,18 @@ app.get('/api/debug/routes', (req, res) => {
       const methods = Array.isArray(middleware.route.methods) 
         ? middleware.route.methods.join(', ')
         : middleware.route.methods;
-      console.log(`${middleware.route.path} [${methods}]`)
+      console.log(`  ${methods}: ${middleware.route.path}`);
+    }
+  })
+  
+  // Specifically log webhook routes
+  console.log('Webhook routes registered:')
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route && middleware.route.path.includes('fulfillment')) {
+      const methods = Array.isArray(middleware.route.methods) 
+        ? middleware.route.methods.join(', ')
+        : middleware.route.methods;
+      console.log(`  ${methods}: ${middleware.route.path}`);
     }
   })
   

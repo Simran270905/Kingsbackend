@@ -149,6 +149,49 @@ app.use(createRateLimiter())
 console.log(' DEBUG: Mounting main routes at /api')
 app.use('/api', routes)
 
+// Debug route to test admin routes mounting
+app.get('/api/debug/admin-routes', async (req, res) => {
+  console.log('🔍 Debug: Admin routes debug endpoint hit')
+  try {
+    const adminRoutes = await import('./routes/admin/adminRoutes.js')
+    console.log('🔍 Admin routes loaded:', typeof adminRoutes.default)
+    console.log('🔍 Admin routes methods:', Object.keys(adminRoutes.default || {}))
+    res.json({
+      success: true,
+      message: 'Admin routes debug',
+      routesLoaded: !!adminRoutes.default,
+      routeCount: Object.keys(adminRoutes.default || {}).length
+    })
+  } catch (error) {
+    console.error('❌ Admin routes import error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Admin routes import failed',
+      error: error.message
+    })
+  }
+})
+
+// Simple dashboard route directly in server.js
+app.get('/api/admin/dashboard', async (req, res) => {
+  console.log('🔍 Debug: Direct dashboard route hit!')
+  try {
+    // Import the controller directly
+    const { getDashboardStats } = await import('./controllers/admin/adminDashboardController.js')
+    console.log('🔍 Dashboard controller imported successfully')
+    
+    // Call the controller function
+    await getDashboardStats(req, res)
+  } catch (error) {
+    console.error('❌ Dashboard controller error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Dashboard controller error',
+      error: error.message
+    })
+  }
+})
+
 // Direct customer routes for frontend compatibility
 console.log(' Direct customer routes for frontend compatibility')
 app.use('/customers', customerRoutes)

@@ -6,6 +6,7 @@ import { protectAdmin } from '../../middleware/auth.js'
 import { getAdminAnalytics, validateRevenue } from '../../controllers/admin/adminAnalyticsController.js'
 import { sendSuccess, sendError } from '../../middleware/errorHandler.js'
 import orderRoutes from './enhancedOrderRoutes.js'
+import analyticsRoutes from '../analytics.routes.js'
 
 const router = express.Router()
 
@@ -42,6 +43,9 @@ router.post('/test-login', (req, res) => {
 router.get('/customers', protectAdmin, getAllCustomers)
 router.get('/analytics', protectAdmin, getAdminAnalytics)
 router.get('/analytics/validate-revenue', protectAdmin, validateRevenue)
+
+// Mount detailed analytics routes for AdminReports component
+router.use('/analytics', analyticsRoutes)
 
 // New order routes
 router.use('/orders', orderRoutes)

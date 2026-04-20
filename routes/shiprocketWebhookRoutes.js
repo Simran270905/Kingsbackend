@@ -1,5 +1,5 @@
 import express from 'express'
-import { handleShiprocketWebhook } from '../controllers/shiprocketWebhookController.js'
+import { handleShiprocketWebhook } from '../controllers/shared/shiprocketWebhookController.js'
 
 const router = express.Router()
 
@@ -28,6 +28,19 @@ router.get('/fulfillment/update', (req, res) => {
       current_timestamp: 'string',
       scans: 'array'
     }
+  })
+})
+
+// POST /api/webhooks/shiprocket - Handle Shiprocket webhook for stock management
+router.post('/webhooks/shiprocket', handleShiprocketWebhook)
+
+// GET /api/webhooks/shiprocket/status/:orderId - Get webhook processing status
+router.get('/webhooks/shiprocket/status/:orderId', (req, res) => {
+  // This will be handled by the controller
+  import('../controllers/shared/shiprocketWebhookController.js').then(({ getWebhookStatus }) => {
+    getWebhookStatus(req, res)
+  }).catch(error => {
+    res.status(500).json({ error: 'Controller not found' })
   })
 })
 

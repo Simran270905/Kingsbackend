@@ -151,6 +151,12 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0
+    },
+    sold: {
+      type: Number,
+      default: 0,
+      min: 0,
+      comment: 'Total units sold - updated atomically with each order'
     }
   },
   { timestamps: true }
@@ -205,6 +211,77 @@ productSchema.pre(['findOneAndUpdate', 'findByIdAndUpdate'], function(next) {
   }
   next()
 })
+
+// Virtual field for stock status
+productSchema.virtual('stockStatus').get(function() {
+  return this.stock > 0 ? 'In Stock' : 'Out of Stock'
+})
+
+// Virtual field for available stock (considering sizes)
+productSchema.virtual('availableStock').get(function() {
+  if (this.hasSizes && this.sizes.length > 0) {
+    return this.sizes.reduce((total, size) => total + size.stock, 0)
+  }
+  return this.stock
+})
+
+// Instance method to check if product can be ordered
+productSchema.methods.canBeOrdered = function(quantity = 1, selectedSize = null) {
+  if (this.hasSizes && selectedSize) {
+    const sizeStock = this.sizes.find(s => s.size === selectedSize)
+    return sizeStock ? sizeStock.stock >= quantity : false
+  }
+  return this.stock >= quantity
+}
+
+// Static method to update stock atomically
+productSchema.statics.updateStockAtomically = async function(productId, quantityChange, operation = 'decrease', selectedSize = null) {
+  const product = await this.findById(productId)
+  if (!product) {
+    throw new Error('Product not found')
+  }
+
+  const updateQuery = {}
+  
+  if (product.hasSizes && selectedSize) {
+    // Handle size-specific stock updates
+    const sizeIndex = product.sizes.findIndex(s => s.size === selectedSize)
+    if (sizeIndex === -1) {
+      throw new Error(`Size ${selectedSize} not found for product`)
+    }
+    
+    const currentSizeStock = product.sizes[sizeIndex].stock
+    const newStock = operation === 'decrease' 
+      ? currentSizeStock - quantityChange 
+      : currentSizeStock + quantityChange
+    
+    if (newStock < 0) {
+      throw new Error(`Insufficient stock for size ${selectedSize}. Current: ${currentSizeStock}, Requested: ${quantityChange}`)
+    }
+    
+    updateQuery.$set = { [`sizes.${sizeIndex}.stock`]: newStock }
+  } else {
+    // Handle general stock updates
+    const newStock = operation === 'decrease' 
+      ? product.stock - quantityChange 
+      : product.stock + quantityChange
+    
+    if (newStock < 0) {
+      throw new Error(`Insufficient stock. Current: ${product.stock}, Requested: ${quantityChange}`)
+    }
+    
+    updateQuery.$set = { stock: newStock }
+  }
+  
+  // Update sold count atomically
+  if (operation === 'decrease') {
+    updateQuery.$inc = { sold: quantityChange, salesCount: quantityChange }
+  } else {
+    updateQuery.$inc = { sold: -quantityChange, salesCount: -quantityChange }
+  }
+  
+  return await this.findByIdAndUpdate(productId, updateQuery, { new: true, runValidators: true })
+}
 
 // Text index for full-text search
 productSchema.index({ name: 'text', description: 'text', category: 'text' })

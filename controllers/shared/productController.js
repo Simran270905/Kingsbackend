@@ -140,6 +140,7 @@ export const getProducts = catchAsync(async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit)
   const products = await Product.find(query)
     .populate('category', 'name slug')
+    .select('name description originalPrice sellingPrice purchasePrice images category brand stock sold sizes hasSizes isActive material purity weight sku averageRating totalReviews isBestSeller isOnSale discountPercentage salesCount createdAt')
     .skip(skip)
     .limit(parseInt(limit))
     .sort({ createdAt: -1 })
@@ -147,8 +148,25 @@ export const getProducts = catchAsync(async (req, res) => {
   
   const total = await Product.countDocuments(query)
   
+  // Transform products to include stock status
+  const transformedProducts = products.map(product => {
+    const productObj = product.toObject()
+    
+    // Add stock status
+    productObj.stockStatus = productObj.stock > 0 ? 'In Stock' : 'Out of Stock'
+    
+    // Add available stock (considering sizes)
+    if (productObj.hasSizes && productObj.sizes.length > 0) {
+      productObj.availableStock = productObj.sizes.reduce((total, size) => total + size.stock, 0)
+    } else {
+      productObj.availableStock = productObj.stock
+    }
+    
+    return productObj
+  })
+  
   sendSuccess(res, {
-    products,
+    products: transformedProducts,
     pagination: {
       total,
       page: parseInt(page),

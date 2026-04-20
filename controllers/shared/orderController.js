@@ -150,7 +150,7 @@ export const createOrder = catchAsync(async (req, res) => {
     return sendError(res, 'Customer name, email and mobile are required', 400)
   }
 
-  // STOCK MANAGEMENT: Check product availability and reserve stock
+  // STOCK MANAGEMENT: Check product availability and reserve stock atomically
   console.log('Checking stock availability for order items...')
   const stockCheckResults = []
   
@@ -169,19 +169,11 @@ export const createOrder = catchAsync(async (req, res) => {
       return sendError(res, `Product is not available: ${item.name || item.title}`, 400)
     }
 
-    // Check stock based on whether product has sizes
-    let availableStock = 0
-    if (product.hasSizes && item.selectedSize) {
-      const sizeStock = product.sizes.find(s => s.size === item.selectedSize)
-      if (!sizeStock) {
-        return sendError(res, `Size ${item.selectedSize} not available for product: ${item.name || item.title}`, 400)
-      }
-      availableStock = sizeStock.stock
-    } else {
-      availableStock = product.stock
-    }
-
-    if (availableStock < item.quantity) {
+    // Use the new canBeOrdered method
+    if (!product.canBeOrdered(item.quantity, item.selectedSize)) {
+      const availableStock = product.hasSizes && item.selectedSize 
+        ? product.sizes.find(s => s.size === item.selectedSize)?.stock || 0
+        : product.stock
       return sendError(res, `Insufficient stock for ${item.name || item.title}. Available: ${availableStock}, Requested: ${item.quantity}`, 400)
     }
 
@@ -189,7 +181,6 @@ export const createOrder = catchAsync(async (req, res) => {
       productId,
       name: item.name || item.title,
       requestedQty: item.quantity,
-      availableStock,
       hasSizes: product.hasSizes,
       selectedSize: item.selectedSize
     })
@@ -297,30 +288,22 @@ export const createOrder = catchAsync(async (req, res) => {
   
   console.log(` Order created: ${order._id} | Method: ${paymentMethod} | Payment Status: ${order.paymentStatus} | Amount: ${totalAmount}`)
 
-  // STOCK MANAGEMENT: Reduce stock for all ordered items
-  console.log('Reducing stock for ordered items...')
+  // STOCK MANAGEMENT: Reduce stock for all ordered items atomically
+  console.log('Reducing stock for ordered items atomically...')
   for (const item of stockCheckResults) {
     try {
-      const updateQuery = {}
-      
-      if (item.hasSizes && item.selectedSize) {
-        // Reduce stock for specific size
-        updateQuery.$inc = { 'sizes.$[elem].stock': -item.requestedQty }
-        updateQuery.$elemMatch = { 'sizes': { size: item.selectedSize } }
-      } else {
-        // Reduce general stock
-        updateQuery.$inc = { stock: -item.requestedQty }
-      }
-      
-      await Product.findByIdAndUpdate(item.productId, updateQuery)
-      
-      // Update sales count
-      await Product.findByIdAndUpdate(item.productId, { $inc: { salesCount: item.requestedQty } })
+      await Product.updateStockAtomically(
+        item.productId, 
+        item.requestedQty, 
+        'decrease', 
+        item.selectedSize
+      )
       
       console.log(` Stock reduced for ${item.name}: -${item.requestedQty} units`)
     } catch (error) {
       console.error(` Failed to reduce stock for ${item.name}:`, error)
-      // Continue with other items, don't fail the order
+      // CRITICAL: If stock update fails, we should not proceed with the order
+      return sendError(res, `Stock update failed for ${item.name}: ${error.message}`, 500)
     }
   }
 
@@ -437,36 +420,21 @@ export const updateOrderStatus = catchAsync(async (req, res) => {
   
   // STOCK MANAGEMENT: Restore stock if order is being cancelled
   if (status === 'cancelled' && currentOrder.status !== 'cancelled') {
-    console.log('Restoring stock for cancelled order items...')
+    console.log('Restoring stock for cancelled order items atomically...')
     
     for (const item of currentOrder.items) {
       try {
-        const product = await Product.findById(item.productId)
-        if (!product) {
-          console.error(`Product not found for stock restoration: ${item.productId}`)
-          continue
-        }
-        
-        const updateQuery = {}
-        
-        if (item.selectedSize && product.hasSizes) {
-          // Restore stock for specific size
-          updateQuery.$inc = { 'sizes.$[elem].stock': item.quantity }
-          updateQuery.$elemMatch = { 'sizes': { size: item.selectedSize } }
-        } else {
-          // Restore general stock
-          updateQuery.$inc = { stock: item.quantity }
-        }
-        
-        await Product.findByIdAndUpdate(item.productId, updateQuery)
-        
-        // Update sales count (decrease)
-        await Product.findByIdAndUpdate(item.productId, { $inc: { salesCount: -item.quantity } })
+        await Product.updateStockAtomically(
+          item.productId, 
+          item.quantity, 
+          'increase', 
+          item.selectedSize
+        )
         
         console.log(` Stock restored for ${item.name}: +${item.quantity} units`)
       } catch (error) {
         console.error(` Failed to restore stock for ${item.name}:`, error)
-        // Continue with other items
+        // Continue with other items, but log the error
       }
     }
   }

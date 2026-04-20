@@ -1,5 +1,6 @@
 import Order, { default as OrderDefault } from '../../models/Order.js'
 import Payment from '../../models/Payment.js'
+import Product from '../../models/Product.js'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
 
 /**
@@ -209,6 +210,21 @@ export const getAdminAnalytics = catchAsync(async (req, res) => {
   
   console.log(`✅ Admin Analytics Complete - Revenue: ₹${totalRevenue}, Match: ${revenueMatch}`)
   
+  // Stock analytics
+  const allProducts = await Product.find({}).lean()
+  const stockAnalytics = {
+    totalProducts: allProducts.length,
+    totalStock: allProducts.reduce((sum, p) => sum + (p.stock || 0), 0),
+    totalSold: allProducts.reduce((sum, p) => sum + (p.sold || 0), 0),
+    outOfStock: allProducts.filter(p => (p.stock || 0) === 0).length,
+    lowStock: allProducts.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= 10).length,
+    inStock: allProducts.filter(p => (p.stock || 0) > 10).length,
+    stockValue: allProducts.reduce((sum, p) => sum + ((p.stock || 0) * (p.purchasePrice || p.originalPrice || 0)), 0),
+    soldValue: allProducts.reduce((sum, p) => sum + ((p.sold || 0) * (p.purchasePrice || p.originalPrice || 0)), 0),
+    totalValue: allProducts.reduce((sum, p) => sum + ((p.stock || 0 + p.sold || 0) * (p.purchasePrice || p.originalPrice || 0)), 0)
+  }
+  
+  // Build response object
   const response = {
     summary: {
       totalRevenue: Math.round(totalRevenue * 100) / 100,
@@ -235,6 +251,7 @@ export const getAdminAnalytics = catchAsync(async (req, res) => {
         codDeliveredUnpaidAmount: Math.round(codDeliveredUnpaidAmount * 100) / 100
       }
     },
+    stock: stockAnalytics,
     statusBreakdown,
     paymentStatusBreakdown,
     paymentMethods,

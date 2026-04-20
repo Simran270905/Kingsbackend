@@ -1107,6 +1107,15 @@ export const retryShiprocketOrder = catchAsync(async (req, res) => {
   try {
     console.log('🔄 Retrying Shiprocket order creation for:', order._id)
     
+    // Import shiprocket service to check account status
+    const shiprocketService = (await import('../../services/shiprocketService.js')).default
+    
+    // Check if Shiprocket account is currently blocked
+    if (shiprocketService.isAccountBlocked()) {
+      const waitTime = shiprocketService.getBlockTimeRemaining()
+      return sendError(res, `Shiprocket account is temporarily blocked. Please wait ${waitTime} minutes before retrying.`, 429)
+    }
+    
     // Check retry limits
     if (order.shiprocketRetries >= 3) {
       return sendError(res, 'Maximum retry attempts (3) exceeded. Please contact support.', 429)
@@ -1123,7 +1132,7 @@ export const retryShiprocketOrder = catchAsync(async (req, res) => {
       }
     }
     
-    // Use the retry mechanism from the service
+    // Use retry mechanism from service
     const result = await shiprocketService.retryOrderCreation(order)
     
     if (result.status === 'created') {

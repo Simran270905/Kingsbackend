@@ -24,7 +24,8 @@ const getShiprocketToken = async () => {
   // Check if account is blocked
   if (accountBlockedUntil && now < accountBlockedUntil) {
     const waitTime = Math.ceil((accountBlockedUntil - now) / (1000 * 60)) // minutes
-    throw new Error(`Shiprocket account is temporarily blocked. Please wait ${waitTime} minutes before retrying.`)
+    const unblockTime = new Date(accountBlockedUntil).toLocaleString()
+    throw new Error(`Shiprocket account is temporarily blocked. Please wait ${waitTime} minutes before retrying. Account will be unblocked at ${unblockTime}.`)
   }
   
   // Check if token is expired or will expire within 5 minutes (300000 ms)
@@ -159,9 +160,34 @@ const makeAuthenticatedRequest = async (method, url, data = {}, headers = {}) =>
   }
 }
 
+// Check if account is currently blocked
+const isAccountBlocked = () => {
+  const now = Date.now()
+  return accountBlockedUntil && now < accountBlockedUntil
+}
+
+// Get remaining block time in minutes
+const getBlockTimeRemaining = () => {
+  const now = Date.now()
+  if (!accountBlockedUntil || now >= accountBlockedUntil) {
+    return 0
+  }
+  return Math.ceil((accountBlockedUntil - now) / (1000 * 60))
+}
+
 class ShiprocketService {
   constructor() {
     // Use global cache instead of instance variables
+  }
+
+  // Public method to check if account is blocked
+  isAccountBlocked() {
+    return isAccountBlocked()
+  }
+
+  // Public method to get remaining block time
+  getBlockTimeRemaining() {
+    return getBlockTimeRemaining()
   }
 
   validateConfig() {

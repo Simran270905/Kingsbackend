@@ -445,6 +445,9 @@ export const createOrder = catchAsync(async (req, res) => {
     }
   }, 1000)
 
+  sendSuccess(res, order, 201, 'Order created successfully')
+})
+
 // UPDATE order status
 export const updateOrderStatus = catchAsync(async (req, res) => {
   const { id } = req.params

@@ -186,10 +186,26 @@ export const getOrderDetailsEnhanced = catchAsync(async (req, res) => {
     
     const order = await Order.findById(id)
       .populate('paymentId', 'razorpayOrderId razorpayPaymentId status amount')
+      .populate('items.productId', 'name price images')
       .lean()
     
     if (!order) {
       return sendError(res, 'Order not found', 404)
+    }
+
+    // Ensure each order item has image - use product image if item doesn't have one
+    const orderWithImages = {
+      ...order,
+      items: order.items.map(item => {
+        // If item has image, use it; otherwise use product's first image
+        const itemImage = item.image || 
+                         (item.productId?.images?.length > 0 ? item.productId.images[0] : null)
+        
+        return {
+          ...item,
+          image: itemImage
+        }
+      })
     }
     
     // Format payment information for display
@@ -217,7 +233,7 @@ export const getOrderDetailsEnhanced = catchAsync(async (req, res) => {
     sendSuccess(res, {
       success: true,
       data: {
-        order,
+        order: orderWithImages,
         paymentInfo,
         paymentStatusBadge
       }

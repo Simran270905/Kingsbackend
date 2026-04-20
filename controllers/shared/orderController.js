@@ -39,11 +39,27 @@ export const getOrders = catchAsync(async (req, res) => {
 // GET single order by ID
 export const getOrderById = catchAsync(async (req, res) => {
   const order = await Order.findById(req.params.id)
-    // ✅ FIXED: No userId population needed - orders now have customer objects
+    // FIXED: No userId population needed - orders now have customer objects
     .populate('items.productId', 'name price images')
 
   if (!order) {
     return sendError(res, 'Order not found', 404)
+  }
+
+  // Ensure each order item has image - use product image if item doesn't have one
+  const orderWithImages = {
+    ...order.toObject(),
+    items: order.items.map(item => {
+      // If item has image, use it; otherwise use product's first image
+      const itemImage = item.image || 
+                       (item.product?.images?.length > 0 ? item.product.images[0] : null) ||
+                       (item.productId?.images?.length > 0 ? item.productId.images[0] : null)
+      
+      return {
+        ...item.toObject(),
+        image: itemImage
+      }
+    })
   }
 
   // Get tracking information if shipment exists
@@ -57,7 +73,7 @@ export const getOrderById = catchAsync(async (req, res) => {
   }
 
   const orderResponse = {
-    ...order.toObject(),
+    ...orderWithImages,
     trackingInfo
   }
 
@@ -217,6 +233,10 @@ export const createOrder = catchAsync(async (req, res) => {
     const subtotal = item.subtotal || (sellingPrice * item.quantity)
     const totalProfit = profitPerUnit * item.quantity
     
+    // Get product image from item, or fetch from product if not available
+    let itemImage = item.image || null
+    
+    // If no image provided, we'll handle it in the API response by populating from product
     return {
       productId: item.id || item.productId,
       name: item.name || item.title,
@@ -226,7 +246,7 @@ export const createOrder = catchAsync(async (req, res) => {
       totalProfit, // Store total profit for this item
       quantity: item.quantity,
       selectedSize: item.selectedSize || null,
-      image: item.image || null,
+      image: itemImage, // Store image if provided, null will be populated from product
       subtotal
     }
   })
@@ -398,8 +418,32 @@ export const createOrder = catchAsync(async (req, res) => {
 
   console.log('✅ Order created successfully:', order._id)
 
-  sendSuccess(res, order, 201, 'Order created successfully')
-})
+  // Trigger analytics and reports refresh for real-time updates
+  setTimeout(async () => {
+    try {
+      // Refresh Analytics
+      await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/admin/analytics/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.ADMIN_TOKEN || 'admin-token'}`
+        }
+      })
+      console.log(' Analytics refresh triggered after order creation')
+
+      // Refresh Reports
+      await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/admin/reports/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.ADMIN_TOKEN || 'admin-token'}`
+        }
+      })
+      console.log(' Reports refresh triggered after order creation')
+    } catch (error) {
+      console.log(' Analytics/Reports refresh failed (non-critical):', error.message)
+    }
+  }, 1000)
 
 // UPDATE order status
 export const updateOrderStatus = catchAsync(async (req, res) => {

@@ -128,6 +128,33 @@ export const handleShiprocketWebhook = catchAsync(async (req, res) => {
     shipmentStatus: order.shiprocketShipmentStatus
   })
 
+  // Trigger analytics and reports refresh for real-time updates
+  setTimeout(async () => {
+    try {
+      // Refresh Analytics
+      await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/admin/analytics/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.ADMIN_TOKEN || 'admin-token'}`
+        }
+      })
+      console.log(' Analytics refresh triggered after webhook processing')
+      
+      // Refresh Reports
+      await fetch(`${process.env.BACKEND_URL || 'http://localhost:5000'}/api/admin/reports/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.ADMIN_TOKEN || 'admin-token'}`
+        }
+      })
+      console.log(' Reports refresh triggered after webhook processing')
+    } catch (error) {
+      console.log(' Analytics/Reports refresh failed (non-critical):', error.message)
+    }
+  }, 500)
+
   sendSuccess(res, {
     message: 'Webhook processed successfully',
     orderId: order._id,

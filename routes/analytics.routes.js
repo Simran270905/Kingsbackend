@@ -7,6 +7,7 @@ import {
   getOrderStatusBreakdown,
   getShippingPerformance
 } from '../controllers/shared/orderController.js'
+import { getSoldAnalytics, getAnalytics, triggerAnalyticsRefresh } from '../controllers/shared/analyticsController.js'
 
 const router = express.Router()
 
@@ -27,5 +28,14 @@ router.get('/order-status-breakdown', getOrderStatusBreakdown)
 
 // GET /api/admin/analytics/shipping-performance - Get shipping performance metrics
 router.get('/shipping-performance', getShippingPerformance)
+
+// GET /api/admin/analytics/sold - Get sold analytics from Orders (Single Source of Truth)
+router.get('/sold', getSoldAnalytics)
+
+// GET /api/admin/analytics - Get comprehensive analytics (REVAMPED)
+router.get('/', getAnalytics)
+
+// POST /api/admin/analytics/refresh - Trigger analytics refresh
+router.post('/refresh', triggerAnalyticsRefresh)
 
 export default router

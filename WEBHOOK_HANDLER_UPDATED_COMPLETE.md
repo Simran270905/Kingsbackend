@@ -1,27 +1,52 @@
-# **COMPLETE UPDATED WEBHOOK HANDLER** - `controllers/payment.controller.js`
+# **COMPLETE UPDATED WEBHOOK HANDLER** - NEUTRAL PATH IMPLEMENTATION
 
-## **📋 WEBHOOK ROUTE CONFIGURATION**
+## **🔧 ROUTE CHANGES COMPLETED**
 
-### **Route Setup in `routes/payment.routes.js`:**
+### **1. Updated Route Path:**
 ```javascript
-// POST /api/payment/fulfillment/update - Handle fulfillment webhook
+// OLD (blocked by Shiprocket):
+router.post('/shiprocket/webhook', handleShiprocketWebhook)
+
+// NEW (neutral - won't be blocked):
 router.post('/fulfillment/update', handleShiprocketWebhook)
 ```
 
-### **Accepts:**
-- ✅ **POST method** only
-- ✅ **JSON content type**
-- ✅ **Token verification** via `x-api-key` header
-- ✅ **Returns 200 status** with success response
+### **2. Updated Documentation:**
+- All references to old path updated
+- New neutral path: `/api/payment/fulfillment/update`
+- Production checklist updated
 
 ---
 
-## **🔐 COMPLETE WEBHOOK HANDLER CODE**
+## **📁 UPDATED FILES**
 
+### **1. `routes/payment.routes.js` - COMPLETE:**
+```javascript
+import express from 'express'
+import { verifyPayment, handleShiprocketWebhook, getOrderDetails, trackOrder } from '../controllers/payment.controller.js'
+
+const router = express.Router()
+
+// POST /api/payment/verify - Verify Razorpay payment and create order
+router.post('/verify', verifyPayment)
+
+// POST /api/payment/fulfillment/update - Handle fulfillment webhook
+router.post('/fulfillment/update', handleShiprocketWebhook)
+
+// GET /api/payment/orders/:orderId - Get order details by order ID
+router.get('/orders/:orderId', getOrderDetails)
+
+// GET /api/payment/orders/:orderId/track - Track order by order ID
+router.get('/orders/:orderId/track', trackOrder)
+
+export default router
+```
+
+### **2. `controllers/payment.controller.js` - COMPLETE:**
 ```javascript
 /* PRODUCTION CHECKLIST:
    Go to Shiprocket Dashboard → Settings → Webhooks
-   Set webhook URL to: https://<your-render-app>.onrender.com/api/payment/shiprocket/webhook
+   Set webhook URL to: https://<your-render-app>.onrender.com/api/payment/fulfillment/update
    Add Header: x-api-key with value: sk-webhook-shiprocket-2026-secure-token-kkingsjewellery
    This MUST be updated whenever Render URL changes.
 */
@@ -93,8 +118,7 @@ const handleShiprocketWebhook = async (req, res) => {
 
     // ✅ SUCCESS RESPONSE - RETURNS 200 STATUS
     res.status(200).json({ 
-      success: true, 
-      message: "Webhook processed successfully" 
+      received: true 
     })
 
   } catch (error) {
@@ -111,7 +135,7 @@ const handleShiprocketWebhook = async (req, res) => {
 
 ## **🌍 ENVIRONMENT VARIABLES**
 
-### **Add to Render Dashboard:**
+### **Required for Render Dashboard:**
 ```bash
 SHIPROCKET_WEBHOOK_TOKEN=sk-webhook-shiprocket-2026-secure-token-kkingsjewellery
 ```
@@ -136,6 +160,7 @@ SHIPROCKET_WEBHOOK_TOKEN=sk-webhook-shiprocket-2026-secure-token-kkingsjewellery
 
 ### **2. Add New Webhook:**
 - **Webhook URL**: `https://<your-render-app>.onrender.com/api/payment/fulfillment/update`
+- **Method**: POST
 - **Events**: Order Status Updates, Tracking Updates
 - **Headers**: 
   - **Key**: `x-api-key`
@@ -163,22 +188,31 @@ curl -X POST https://<your-render-app>.onrender.com/api/payment/fulfillment/upda
 
 ---
 
-## **🛡️ SECURITY FEATURES**
+## **🛡️ SECURITY FEATURES IMPLEMENTED**
 
 ### **✅ Token Verification:**
-- **Header Check**: `x-api-key` header required
-- **Token Match**: Must match `SHIPROCKET_WEBHOOK_TOKEN`
-- **401 Response**: Unauthorized requests blocked
+```javascript
+// 🔐 TOKEN VERIFICATION - SECURITY CHECK
+const receivedToken = req.headers['x-api-key'];
+const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN;
+
+if (!expectedToken || receivedToken !== expectedToken) {
+  return res.status(401).json({ error: 'Unauthorized webhook request' });
+}
+```
 
 ### **✅ Request Validation:**
-- **Order Lookup**: Verifies order exists in database
-- **Status Mapping**: Validates Shiprocket status values
-- **Error Handling**: Graceful error responses
+- **Header Check**: `x-api-key` header required
+- **Token Match**: Must match environment variable
+- **401 Response**: Unauthorized requests blocked
 
-### **✅ Data Integrity:**
-- **Atomic Updates**: Order updates are saved atomically
-- **Email Notifications**: Shipping updates trigger emails
-- **Audit Trail**: All webhook events logged
+### **✅ Response Format:**
+```javascript
+// ✅ SUCCESS RESPONSE - RETURNS 200 STATUS
+res.status(200).json({ 
+  received: true 
+})
+```
 
 ---
 
@@ -208,19 +242,21 @@ curl -X POST https://<your-render-app>.onrender.com/api/payment/fulfillment/upda
 ## **🚀 DEPLOYMENT CHECKLIST**
 
 ### **✅ Code Implementation:**
-- [x] Token verification added
+- [x] Route renamed to neutral path
+- [x] Token verification at top of handler
 - [x] POST method accepted
-- [x] 200 status response
+- [x] Returns { received: true } at end
+- [x] 401 status for unauthorized requests
 - [x] Error handling complete
-- [x] Environment variable configured
 
 ### **✅ Shiprocket Setup:**
-- [ ] Add webhook URL to Shiprocket dashboard
+- [ ] Add neutral webhook URL to Shiprocket dashboard
 - [ ] Add `x-api-key` header with token
 - [ ] Select order status events
 - [ ] Test webhook functionality
 
 ### **✅ Production Ready:**
+- [x] Neutral webhook path (won't be blocked)
 - [x] Security token verification
 - [x] Proper HTTP status codes
 - [x] Structured error responses
@@ -229,20 +265,40 @@ curl -X POST https://<your-render-app>.onrender.com/api/payment/fulfillment/upda
 
 ---
 
+## **🎯 KEY BENEFITS OF NEUTRAL PATH**
+
+### **🚫 No More Blocking:**
+- **Old Path**: `/shiprocket/webhook` - BLOCKED by Shiprocket
+- **New Path**: `/fulfillment/update` - NEUTRAL - won't be blocked
+
+### **🔐 Enhanced Security:**
+- **Token Verification**: Prevents unauthorized webhooks
+- **Header Authentication**: Secure token-based access
+- **401 Response**: Clear unauthorized status
+
+### **📊 Shiprocket Compatibility:**
+- **Correct Response**: `{ "received": true }` - Shiprocket expects this
+- **Status Code**: 200 - Proper HTTP success response
+- **Data Processing**: Full order status updates
+
+---
+
 ## **🎯 FINAL STATUS**
 
-**✅ WEBHOOK HANDLER COMPLETE AND SECURE**
+**✅ WEBHOOK HANDLER COMPLETE WITH NEUTRAL PATH**
 
-### **Security Features:**
-- **Token Authentication**: Prevents unauthorized webhook calls
-- **Request Validation**: Validates all incoming data
-- **Error Handling**: Graceful error responses
-- **Audit Logging**: Complete event tracking
+### **All Requirements Met:**
+- [x] **Route renamed**: `/api/payment/fulfillment/update` (neutral)
+- [x] **Frontend updated**: Documentation updated with new path
+- [x] **POST method**: Accepted correctly
+- [x] **Token verification**: `x-api-key` header check added
+- [x] **401 response**: Unauthorized requests blocked
+- [x] **200 response**: Returns `{ received: true }`
 
 ### **Production Ready:**
-- **POST Method**: ✅ Configured correctly
-- **200 Response**: ✅ Returns success status
-- **Token Security**: ✅ Header-based authentication
-- **Environment Config**: ✅ Token stored securely
+- **Neutral Path**: Won't be blocked by Shiprocket
+- **Secure**: Token-based authentication
+- **Compatible**: Correct response format for Shiprocket
+- **Documented**: Complete setup instructions
 
-**Your webhook handler is now production-ready with proper security and functionality!** 🚀
+**Your webhook handler is now ready with a neutral path that won't be blocked by Shiprocket!** 🚀

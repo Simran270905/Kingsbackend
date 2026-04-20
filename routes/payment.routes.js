@@ -6,8 +6,8 @@ const router = express.Router()
 // POST /api/payment/verify - Verify Razorpay payment and create order
 router.post('/verify', verifyPayment)
 
-// POST /api/payment/shiprocket/webhook - Handle Shiprocket webhook
-router.post('/shiprocket/webhook', handleShiprocketWebhook)
+// POST /api/payment/fulfillment/update - Handle fulfillment webhook
+router.post('/fulfillment/update', handleShiprocketWebhook)
 
 // GET /api/payment/orders/:orderId - Get order details by order ID
 router.get('/orders/:orderId', getOrderDetails)

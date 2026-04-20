@@ -129,7 +129,8 @@ const verifyPayment = async (req, res) => {
 
 /* PRODUCTION CHECKLIST:
    Go to Shiprocket Dashboard → Settings → Webhooks
-   Set webhook URL to: https://<your-render-app>.onrender.com/api/payment/shiprocket/webhook
+   Set webhook URL to: https://<your-render-app>.onrender.com/api/payment/fulfillment/update
+   Add Header: x-api-key with value: sk-webhook-shiprocket-2026-secure-token-kkingsjewellery
    This MUST be updated whenever Render URL changes.
 */
 
@@ -197,8 +198,7 @@ const handleShiprocketWebhook = async (req, res) => {
     }
 
     res.status(200).json({ 
-      success: true, 
-      message: "Webhook processed successfully" 
+      received: true 
     })
 
   } catch (error) {

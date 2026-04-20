@@ -78,6 +78,7 @@ import { createRateLimiter } from './middleware/auth.js'
 import routes from './routes/index.js'
 import customerRoutes from './routes/customer/index.js'
 import shiprocketTestRoutes from './routes/shiprocketTestRoutes.js'
+import shiprocketWebhookRoutes from './routes/shiprocketWebhookRoutes.js'
 
 // Import quick fix controller
 import { fixDeliveredCODOrders, getCurrentStatus } from './controllers/shared/quickFixController.js'

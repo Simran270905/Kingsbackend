@@ -1,5 +1,6 @@
 import express from 'express'
-import { verifyPayment, handleShiprocketWebhook, getOrderDetails, trackOrder } from '../controllers/payment.controller.js'
+import { verifyPayment, getOrderDetails, trackOrder } from '../controllers/payment.controller.js'
+import { handleShiprocketWebhook } from '../controllers/shiprocketWebhookController.js'
 
 const router = express.Router()
 

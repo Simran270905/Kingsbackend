@@ -223,6 +223,10 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    awbNumber: {
+      type: String,
+      default: null
+    },
     courierName: {
       type: String,
       default: null
@@ -231,6 +235,34 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ['not_created', 'pending', 'created', 'shipped', 'delivered', 'failed'],
       default: 'not_created'
+    },
+    shipmentStatus: {
+      type: String,
+      default: null
+    },
+    trackingUpdatedAt: {
+      type: Date,
+      default: null
+    },
+    trackingScans: {
+      type: String, // Store as JSON string
+      default: null
+    },
+    shiprocketStatus: {
+      type: String,
+      default: null
+    },
+    shiprocketStatusId: {
+      type: Number,
+      default: null
+    },
+    shiprocketShipmentStatus: {
+      type: String,
+      default: null
+    },
+    shiprocketShipmentStatusId: {
+      type: Number,
+      default: null
     },
     estimatedDelivery: {
       type: Date,

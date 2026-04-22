@@ -277,29 +277,22 @@ router.get('/test', (req, res) => {
 })
 
 /**
- * GET /api/reviews/debug-order
- * Debug endpoint to test Order model
+ * GET /api/reviews/debug-simple
+ * Simple debug endpoint without database
  */
-router.get('/debug-order', async (req, res) => {
+router.get('/debug-simple', (req, res) => {
   try {
     const testOrderId = '65a1b2c3d4e5f6a7b8c9d0e1f2a3b'
-    console.log('Testing Order model with ID:', testOrderId)
-    
-    const order = await Order.findOne({ _id: testOrderId }).lean()
+    console.log('Testing without database - Order ID:', testOrderId)
     
     res.json({
       success: true,
+      message: 'Debug endpoint working without database',
       orderId: testOrderId,
-      orderFound: !!order,
-      orderData: order ? {
-        id: order._id,
-        status: order.status,
-        hasItems: !!order.items,
-        itemsCount: order.items?.length || 0
-      } : null
+      timestamp: new Date()
     })
   } catch (error) {
-    console.error('Debug order error:', error)
+    console.error('Debug simple error:', error)
     res.status(500).json({
       success: false,
       error: error.message

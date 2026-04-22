@@ -18,16 +18,26 @@ const transporter = nodemailer.createTransport({
  */
 export async function sendReviewEmail(order) {
   try {
+    console.log('sendReviewEmail called for order:', order._id)
+    
     // Validate order has required fields
-    if (!order._id || !order.guestInfo?.email) {
-      console.error('Order missing required fields for review email:', order._id)
+    if (!order._id) {
+      console.error('Order missing _id field:', order)
       return false
     }
+
+    const customerEmail = order.guestInfo?.email || order.customer?.email
+    if (!customerEmail) {
+      console.error('Order missing email field. guestInfo:', order.guestInfo, 'customer:', order.customer)
+      return false
+    }
+
+    console.log('Customer email found:', customerEmail)
 
     // Generate secure review link
     const reviewLink = generateReviewLink(
       order._id.toString(),
-      order.guestInfo.email,
+      customerEmail,
       order.deliveredAt || new Date()
     )
 
@@ -36,13 +46,16 @@ export async function sendReviewEmail(order) {
       return false
     }
 
+    console.log('Review link generated:', reviewLink)
+
     // Get customer name
-    const customerName = order.guestInfo.firstName || order.customer?.name || 'Valued Customer'
+    const customerName = order.guestInfo?.firstName || order.guestInfo?.lastName || order.customer?.name || 'Valued Customer'
+    console.log('Customer name:', customerName)
 
     // Email content
     const emailContent = {
       from: process.env.EMAIL_USER || 'kkingsjewellery@gmail.com',
-      to: order.guestInfo.email,
+      to: customerEmail,
       subject: `How was your KKINGS Jewellery experience? Order #${order._id.toString().slice(-8)}`,
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">

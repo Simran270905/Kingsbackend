@@ -10,8 +10,8 @@ const auditAnalyticsSystem = async () => {
   console.log('🔍 COMPREHENSIVE ANALYTICS SYSTEM AUDIT')
   console.log('=' .repeat(50))
   
-  const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'http://localhost:5173'
-  const apiBase = 'http://localhost:5000/api'
+  const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://www.kkingsjewellery.com'
+  const apiBase = 'https://api.kkingsjewellery.com/api'
   
   // Test results storage
   const testResults = {

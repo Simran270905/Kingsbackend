@@ -19,8 +19,8 @@ export function generateReviewLink(orderId, email, deliveredAt = null, baseUrl =
       return null
     }
 
-    // Get base URL from parameter or environment
-    const frontendUrl = baseUrl || process.env.FRONTEND_URL || 'http://localhost:5173'
+    // Get base URL from parameter or environment (no localhost fallback)
+    const frontendUrl = baseUrl || process.env.FRONTEND_URL
 
     // Generate secure token
     const token = generateReviewToken(orderId, email, deliveredAt)

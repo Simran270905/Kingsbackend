@@ -101,7 +101,7 @@ export async function sendReviewEmail(order) {
               <p style="margin: 0; color: #333; font-weight: bold;">Best regards,</p>
               <p style="margin: 5px 0; color: #666;">The KKINGS Jewellery Team</p>
               <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">
-                <a href="https://kings-main.vercel.app" style="color: #8B7355; text-decoration: none;">Visit Our Store</a> | 
+                <a href="https://www.kkingsjewellery.com" style="color: #8B7355; text-decoration: none;">Visit Our Store</a> | 
                 <a href="mailto:support@kkingsjewellery.com" style="color: #8B7355; text-decoration: none;">Contact Support</a>
               </p>
             </div>

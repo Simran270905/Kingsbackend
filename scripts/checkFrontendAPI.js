@@ -12,10 +12,9 @@ const checkFrontendAPI = async () => {
   // Check different possible API URLs the frontend might be using
   const possibleAPIs = [
     'http://localhost:5000/api/orders/stats',
-    'http://localhost:5001/api/orders/stats',  // Different port
-    'http://127.0.0.1:5000/api/orders/stats',  // Different host
-    'http://localhost:3000/api/orders/stats',  // Common frontend port
-    'http://localhost:5173/api/orders/stats',  // Vite default port
+    'https://api.kkingsjewellery.com/api/orders/stats',  // Production API
+    'https://api.kkingsjewellery.com/api/orders/stats',  // Production API (duplicate)
+    'https://api.kkingsjewellery.com/api/orders/stats',  // Production API (duplicate)
   ]
   
   console.log('\n🔧 Testing different API endpoints your frontend might be calling:')

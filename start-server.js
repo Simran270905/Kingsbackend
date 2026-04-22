@@ -32,9 +32,11 @@ serverProcess.on('error', (error) => {
 serverProcess.on('close', (code) => {
   if (code === 0) {
     console.log('✅ Backend server started successfully!')
-    console.log('📧 Server is running on: http://localhost:5000')
-    console.log('📧 You can now test the manual review email feature')
-    console.log('📧 Go to: http://localhost:5173/admin')
+    console.log('📧 Server is running on: https://www.kkingsjewellery.com')
+    console.log('📧 Frontend should connect to https://www.kkingsjewellery.com/api')
+    console.log('📧 Admin panel: https://www.kkingsjewellery.com/admin')
+    console.log('📧 Manual review email feature is ready!')
+    console.log('📧 Go to: https://www.kkingsjewellery.com/admin/orders')
     console.log('📧 Click Orders → View any order → Send Review Email')
   } else {
     console.error('❌ Backend server exited with code:', code)

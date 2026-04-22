@@ -71,10 +71,10 @@ async function verifySync() {
     }
 
     console.log('\n📍 Next Steps:')
-    console.log('   1. Open Admin Panel: http://localhost:5173/admin/products')
+    console.log('   1. Open Admin Panel: https://www.kkingsjewellery.com/admin/products')
     console.log('   2. Login with password: Admin@123')
     console.log('   3. Verify products are visible')
-    console.log('   4. Open Frontend: http://localhost:5173/shop')
+    console.log('   4. Open Frontend: https://www.kkingsjewellery.com/shop')
     console.log('   5. Verify same products appear\n')
 
     process.exit(0)

@@ -48,7 +48,7 @@ console.log('4. ✅ Customer email exists in order?')
 console.log('5. ✅ Test email service working?')
 
 console.log('\n🔍 HOW TO TEST ===')
-console.log('1. Go to: http://localhost:5173/admin/orders')
+console.log('1. Go to: https://www.kkingsjewellery.com/admin/orders')
 console.log('2. Click "View" on any order')
 console.log('3. Look for "Review Email Actions" section')
 console.log('4. Click "Send Review Email" button')

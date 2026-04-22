@@ -382,17 +382,51 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
 
     console.log('Token validation passed, checking database...')
     
-    // For now, return success without database to isolate the issue
-    return res.json({
-      valid: true,
-      orderId: orderId,
-      message: 'Token validation successful - database check temporarily disabled',
-      tokenData: {
-        orderId: tokenData.orderId,
-        email: tokenData.email,
-        expires: tokenData.expires
+    // Check if Order model is available
+    if (!Order) {
+      console.error('Order model not available')
+      return res.status(500).json({
+        error: 'Order model not available'
+      })
+    }
+    
+    console.log('Order model available, attempting database query...')
+    
+    // Get order details from database
+    try {
+      const order = await Order.findOne({ _id: orderId }).lean()
+      
+      if (!order) {
+        console.log('Order not found in database')
+        return res.status(404).json({
+          error: 'Order not found',
+          message: 'The specified order does not exist in the database',
+          orderId: orderId,
+          suggestion: 'Use a real order ID from the admin panel to test review functionality'
+        })
       }
-    })
+
+      console.log('Order found, items:', order.items?.length || 0)
+      
+      // Return success with real order data
+      return res.json({
+        valid: true,
+        orderId: order._id,
+        products: order.items?.map(item => ({
+          productId: item.productId,
+          name: item.name || 'Product',
+          image: item.image || null,
+          quantity: item.quantity || 1,
+          price: item.price || 0
+        })) || []
+      })
+      
+    } catch (orderError) {
+      console.error('Database error finding order:', orderError)
+      return res.status(500).json({
+        error: 'Database error: ' + orderError.message
+      })
+    }
 
   } catch (error) {
     console.error('Error in verify-token endpoint:', error)

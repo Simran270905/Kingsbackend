@@ -89,17 +89,19 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
       })
     }
 
-    // Check if order exists and is delivered
+    // Check if order exists (temporarily removed delivered status check for debugging)
     const order = await Order.findOne({ 
-      _id: orderId,
-      status: { $regex: /^delivered$/i } // Case-insensitive "delivered"
+      _id: orderId
     }).lean()
 
     if (!order) {
       return res.status(404).json({
-        error: 'Order not found or not delivered'
+        error: 'Order not found'
       })
     }
+
+    // Debug: Log order status
+    console.log('Order found with status:', order.status)
 
     // Verify email matches order
     const orderEmail = order.guestInfo?.email || order.customer?.email

@@ -122,7 +122,9 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
     }
 
     // Check for existing review
+    console.log('Checking for existing review...')
     const existingReview = await Review.checkExistingReview(orderId, productId)
+    console.log('Existing review check result:', existingReview)
     if (existingReview) {
       return res.status(409).json({
         error: 'Review already submitted for this product in this order'
@@ -131,6 +133,7 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
 
     // Sanitize comment
     const sanitizedComment = comment.trim().replace(/[<>]/g, '')
+    console.log('Sanitized comment:', sanitizedComment)
 
     // ADD THIS LOGIC BEFORE saving review
     let uploadedImages = [];
@@ -170,6 +173,16 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
     }
 
     // Create review
+    console.log('Creating review with data:', {
+      orderId,
+      productId,
+      email: tokenData.email,
+      rating,
+      comment: sanitizedComment,
+      images: uploadedImages,
+      status: 'pending'
+    })
+    
     const review = new Review({
       orderId,
       productId,
@@ -180,7 +193,9 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
       status: 'pending' // Will be auto-approved if rating >= 4 and comment is good
     })
 
+    console.log('Saving review to database...')
     await review.save()
+    console.log('Review saved successfully!')
 
     // Return success response
     res.status(201).json({
@@ -192,6 +207,9 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
 
   } catch (error) {
     console.error('Error submitting review:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error message:', error.message)
+    console.error('Error code:', error.code)
     
     // Handle duplicate key error
     if (error.code === 11000) {
@@ -201,7 +219,7 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
     }
 
     res.status(500).json({
-      error: 'Failed to submit review. Please try again.'
+      error: `Failed to submit review: ${error.message}`
     })
   }
 })

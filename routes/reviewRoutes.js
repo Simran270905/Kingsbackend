@@ -301,6 +301,45 @@ router.get('/debug-simple', (req, res) => {
 })
 
 /**
+ * GET /api/reviews/debug-db
+ * Test database connection
+ */
+router.get('/debug-db', async (req, res) => {
+  try {
+    console.log('Testing database connection...')
+    
+    // Test basic mongoose connection
+    const mongoose = await import('mongoose')
+    console.log('Mongoose imported:', !!mongoose)
+    
+    // Test Order model
+    const Order = await import('../models/Order.js')
+    console.log('Order model imported:', !!Order)
+    
+    // Test simple query
+    const count = await Order.default.countDocuments()
+    console.log('Order count:', count)
+    
+    res.json({
+      success: true,
+      message: 'Database connection working',
+      mongooseConnected: !!mongoose,
+      orderModelLoaded: !!Order,
+      totalOrders: count,
+      timestamp: new Date()
+    })
+  } catch (error) {
+    console.error('Database test error:', error)
+    console.error('Database test stack:', error.stack)
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    })
+  }
+})
+
+/**
  * GET /api/reviews/verify-token
  * Verify a review token and return order info
  */

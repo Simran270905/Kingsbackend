@@ -260,6 +260,14 @@ router.get('/product/:productId', async (req, res) => {
 })
 
 /**
+ * GET /api/reviews/test
+ * Simple test endpoint
+ */
+router.get('/test', (req, res) => {
+  res.json({ message: 'Review routes are working', timestamp: new Date() })
+})
+
+/**
  * GET /api/reviews/verify-token
  * Verify a review token and return order info
  */

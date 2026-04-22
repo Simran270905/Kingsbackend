@@ -121,11 +121,9 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
       })
     }
 
-    // Check for existing review
-    console.log('Review model:', Review)
-    console.log('Review.checkExistingReview method:', Review.checkExistingReview)
+    // Check for existing review (using direct query to avoid model issues)
     console.log('Checking for existing review...')
-    const existingReview = await Review.checkExistingReview(orderId, productId)
+    const existingReview = await Review.findOne({ orderId, productId }).lean()
     console.log('Existing review check result:', existingReview)
     if (existingReview) {
       return res.status(409).json({

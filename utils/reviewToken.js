@@ -18,6 +18,12 @@ export function generateReviewToken(orderId, email, deliveredAt = null) {
       throw new Error('Order ID and email are required')
     }
 
+    // Create header
+    const header = {
+      alg: 'HS256',
+      typ: 'JWT'
+    }
+
     // Create payload with expiry
     const expiryDate = deliveredAt 
       ? new Date(deliveredAt.getTime() + (TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000))
@@ -31,14 +37,16 @@ export function generateReviewToken(orderId, email, deliveredAt = null) {
     }
 
     // Create HMAC signature
+    const headerString = JSON.stringify(header)
     const payloadString = JSON.stringify(payload)
     const signature = crypto
       .createHmac('sha256', REVIEW_TOKEN_SECRET)
-      .update(payloadString)
+      .update(headerString + '.' + payloadString)
       .digest('hex')
 
-    // Combine payload and signature
-    const token = Buffer.from(payloadString).toString('base64') + '.' + signature
+    // Combine header, payload, and signature
+    const token = Buffer.from(headerString).toString('base64').replace(/=/g, '') + '.' + 
+                   Buffer.from(payloadString).toString('base64').replace(/=/g, '') + '.' + signature
 
     return token
   } catch (error) {

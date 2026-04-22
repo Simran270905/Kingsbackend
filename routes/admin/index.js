@@ -74,9 +74,12 @@ router.post('/send-review-email', protectAdmin, async (req, res) => {
     console.log('Found order:', {
       id: order._id,
       hasGuestInfo: !!order.guestInfo,
-      guestEmail: order.guestInfo?.email,
+      guestInfo: order.guestInfo,
       hasCustomer: !!order.customer,
-      customerEmail: order.customer?.email
+      customer: order.customer,
+      hasShippingAddress: !!order.shippingAddress,
+      shippingAddress: order.shippingAddress,
+      userId: order.userId
     })
     
     // Set deliveredAt if not already set
@@ -86,12 +89,13 @@ router.post('/send-review-email', protectAdmin, async (req, res) => {
       console.log('Set deliveredAt for order:', orderId)
     }
     
-    // Ensure order has email for review email
-    if (!order.guestInfo?.email && !order.customer?.email) {
-      console.error('Order has no email address:', orderId)
+    // Check if order has any email address
+    const hasEmail = !!(order.guestInfo?.email || order.customer?.email || order.shippingAddress?.email)
+    if (!hasEmail) {
+      console.error('Order has no email address in any field:', orderId)
       return res.status(400).json({
         success: false,
-        error: 'Order has no customer email address'
+        error: 'Order has no customer email address in guestInfo, customer, or shippingAddress'
       })
     }
     

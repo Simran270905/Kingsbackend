@@ -26,9 +26,15 @@ export async function sendReviewEmail(order) {
       return false
     }
 
-    const customerEmail = order.guestInfo?.email || order.customer?.email
+    const customerEmail = order.guestInfo?.email || order.customer?.email || order.shippingAddress?.email
     if (!customerEmail) {
-      console.error('Order missing email field. guestInfo:', order.guestInfo, 'customer:', order.customer)
+      console.error('Order missing email field. Order structure:', {
+        _id: order._id,
+        guestInfo: order.guestInfo,
+        customer: order.customer,
+        shippingAddress: order.shippingAddress,
+        userId: order.userId
+      })
       return false
     }
 
@@ -49,7 +55,14 @@ export async function sendReviewEmail(order) {
     console.log('Review link generated:', reviewLink)
 
     // Get customer name
-    const customerName = order.guestInfo?.firstName || order.guestInfo?.lastName || order.customer?.name || 'Valued Customer'
+    let customerName = 'Valued Customer'
+    if (order.guestInfo) {
+      customerName = [order.guestInfo.firstName, order.guestInfo.lastName].filter(Boolean).join(' ') || 'Valued Customer'
+    } else if (order.customer?.name) {
+      customerName = order.customer.name
+    } else if (order.shippingAddress?.name) {
+      customerName = order.shippingAddress.name
+    }
     console.log('Customer name:', customerName)
 
     // Email content

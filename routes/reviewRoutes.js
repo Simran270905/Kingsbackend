@@ -346,71 +346,57 @@ router.get('/debug-db', async (req, res) => {
 router.get('/verify-token', verifyTokenLimit, async (req, res) => {
   try {
     const { token, orderId } = req.query
+    console.log('=== VERIFY TOKEN START ===')
+    console.log('Token:', token ? 'present' : 'missing')
+    console.log('OrderId:', orderId)
 
     if (!token || !orderId) {
+      console.log('Missing token or orderId')
       return res.status(400).json({
         error: 'Token and orderId are required'
       })
     }
 
+    console.log('Validating token...')
     // Validate token
     const tokenValidation = validateReviewToken(token)
+    console.log('Token validation result:', tokenValidation.valid)
     
     if (!tokenValidation.valid) {
+      console.log('Token validation failed:', tokenValidation.error)
       return res.status(401).json({
         error: tokenValidation.error || 'Invalid or expired token'
       })
     }
 
     const tokenData = tokenValidation.data
+    console.log('Token data:', tokenData)
 
     // Verify token matches order
     if (tokenData.orderId !== orderId) {
+      console.log('Token order ID mismatch')
       return res.status(401).json({
         error: 'Token does not match this order'
       })
     }
 
-    // Get order details from database
-    try {
-      console.log('Attempting to find order:', orderId)
-      
-      const order = await Order.findOne({ _id: orderId }).lean()
-      
-      if (!order) {
-        console.log('Order not found in database - this is expected for test order')
-        return res.status(404).json({
-          error: 'Order not found',
-          message: 'The specified order does not exist in the database',
-          orderId: orderId,
-          suggestion: 'Use a real order ID from the admin panel to test review functionality'
-        })
+    console.log('Token validation passed, checking database...')
+    
+    // For now, return success without database to isolate the issue
+    return res.json({
+      valid: true,
+      orderId: orderId,
+      message: 'Token validation successful - database check temporarily disabled',
+      tokenData: {
+        orderId: tokenData.orderId,
+        email: tokenData.email,
+        expires: tokenData.expires
       }
-
-      console.log('Order found, items:', order.items?.length || 0)
-      
-      // Return success with real order data
-      return res.json({
-        valid: true,
-        orderId: order._id,
-        products: order.items?.map(item => ({
-          productId: item.productId,
-          name: item.name || 'Product',
-          image: item.image || null,
-          quantity: item.quantity || 1,
-          price: item.price || 0
-        })) || []
-      })
-      
-    } catch (orderError) {
-      console.error('Database error finding order:', orderError)
-      return res.status(500).json({
-        error: 'Database error: ' + orderError.message
-      })
-    }
+    })
 
   } catch (error) {
     console.error('Error in verify-token endpoint:', error)
+    console.error('Error stack:', error.stack)
     res.status(500).json({
       error: 'Internal server error: ' + error.message
     })

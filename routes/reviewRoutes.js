@@ -41,7 +41,7 @@ const verifyTokenLimit = rateLimit({
  * POST /api/reviews/submit
  * Submit a new review with token validation
  */
-router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) => {
+router.post('/submit', submitReviewLimit, async (req, res) => {
   try {
     const { orderId, productId, rating, comment, token } = req.body
 
@@ -134,43 +134,6 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
     // Sanitize comment
     const sanitizedComment = comment.trim().replace(/[<>]/g, '')
     console.log('Sanitized comment:', sanitizedComment)
-
-    // ADD THIS LOGIC BEFORE saving review
-    let uploadedImages = [];
-
-    if (req.files && req.files.length > 0) {
-      try {
-        for (const file of req.files) {
-          // Upload to Cloudinary using buffer
-          const result = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-              { 
-                folder: 'reviews',
-                resource_type: 'image',
-                format: 'auto',
-                quality: 'auto'
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              }
-            );
-            
-            uploadStream.end(file.buffer);
-          });
-
-          uploadedImages.push({
-            url: result.secure_url,
-            public_id: result.public_id,
-          });
-        }
-        console.log(`Uploaded ${uploadedImages.length} images for review`);
-      } catch (uploadError) {
-        console.error('Image upload failed:', uploadError);
-        // Continue without images - don't block review submission
-        uploadedImages = [];
-      }
-    }
 
     // Create review (simplified for testing)
     console.log('Creating review with simplified data...')

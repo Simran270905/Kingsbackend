@@ -277,6 +277,37 @@ router.get('/test', (req, res) => {
 })
 
 /**
+ * GET /api/reviews/debug-order
+ * Debug endpoint to test Order model
+ */
+router.get('/debug-order', async (req, res) => {
+  try {
+    const testOrderId = '65a1b2c3d4e5f6a7b8c9d0e1f2a3b'
+    console.log('Testing Order model with ID:', testOrderId)
+    
+    const order = await Order.findOne({ _id: testOrderId }).lean()
+    
+    res.json({
+      success: true,
+      orderId: testOrderId,
+      orderFound: !!order,
+      orderData: order ? {
+        id: order._id,
+        status: order.status,
+        hasItems: !!order.items,
+        itemsCount: order.items?.length || 0
+      } : null
+    })
+  } catch (error) {
+    console.error('Debug order error:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message
+    })
+  }
+})
+
+/**
  * GET /api/reviews/verify-token
  * Verify a review token and return order info
  */

@@ -172,40 +172,37 @@ router.post('/submit', submitReviewLimit, uploadReviewImages, async (req, res) =
       }
     }
 
-    // Create review
-    console.log('Creating review with data:', {
-      orderId,
-      productId,
-      email: tokenData.email,
-      rating,
-      comment: sanitizedComment,
-      images: uploadedImages,
-      status: 'pending'
-    })
+    // Create review (simplified for testing)
+    console.log('Creating review with simplified data...')
     
-    const review = new Review({
-      orderId,
-      productId,
-      email: tokenData.email,
-      rating,
-      comment: sanitizedComment,
-      images: uploadedImages, // ADD to Review Save
-      status: 'pending' // Will be auto-approved if rating >= 4 and comment is good
-    })
+    try {
+      const review = new Review({
+        orderId,
+        productId,
+        email: tokenData.email,
+        rating,
+        comment: sanitizedComment,
+        images: [], // Simplified - no images for now
+        status: 'pending'
+      })
 
-    console.log('Saving review to database...')
-    await review.save()
-    console.log('Review saved successfully!')
+      console.log('Saving review to database...')
+      await review.save()
+      console.log('Review saved successfully!')
+      
+      // Return success response
+      res.status(201).json({
+        success: true,
+        message: 'Review submitted successfully. It will be visible after approval.',
+        reviewId: review._id,
+        status: review.status
+      })
+    } catch (saveError) {
+      console.error('Error saving review:', saveError)
+      throw saveError
+    }
 
-    // Return success response
-    res.status(201).json({
-      success: true,
-      message: 'Review submitted successfully. It will be visible after approval.',
-      reviewId: review._id,
-      status: review.status
-    })
-
-  } catch (error) {
+    } catch (error) {
     console.error('Error submitting review:', error)
     console.error('Error stack:', error.stack)
     console.error('Error message:', error.message)

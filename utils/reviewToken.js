@@ -66,18 +66,18 @@ export function validateReviewToken(token) {
       return { valid: false, error: 'Invalid token format' }
     }
 
-    // Split token into payload and signature
+    // Split token into header, payload, and signature
     const parts = token.split('.')
-    if (parts.length !== 2) {
+    if (parts.length !== 3) {
       return { valid: false, error: 'Invalid token structure' }
     }
 
-    const [payloadBase64, signature] = parts
+    const [headerBase64, payloadBase64, signature] = parts
 
     // Decode payload
     let payload
     try {
-      const payloadString = Buffer.from(payloadBase64, 'base64').toString()
+      const payloadString = Buffer.from(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
       payload = JSON.parse(payloadString)
     } catch (error) {
       return { valid: false, error: 'Invalid token payload' }
@@ -94,10 +94,11 @@ export function validateReviewToken(token) {
     }
 
     // Verify HMAC signature
+    const headerString = Buffer.from(headerBase64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()
     const payloadString = JSON.stringify(payload)
     const expectedSignature = crypto
       .createHmac('sha256', REVIEW_TOKEN_SECRET)
-      .update(payloadString)
+      .update(headerString + '.' + payloadString)
       .digest('hex')
 
     if (signature !== expectedSignature) {

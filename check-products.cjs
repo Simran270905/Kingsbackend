@@ -3,7 +3,7 @@ const Product = require('./models/Product');
 const Category = require('./models/Category');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://Simrankadam_db_user:Simran123@cluster0.2sc2fg5.mongodb.net/?appName=Cluster0')
+mongoose.connect(process.env.MONGO_URI)
 .then(async () => {
   console.log('=== CONNECTED TO MONGODB ===');
   

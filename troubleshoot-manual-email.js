@@ -87,7 +87,7 @@ const testSpecificOrder = async () => {
   
   // Check if order exists and has email
   const testOrderId = '65a1b2c3d4e5f6a7b8c9d0e1f2a3b'
-  const testEmail = 'simrankadamkb12@gmail.com'
+  const testEmail = process.env.EMAIL_USER || 'test@example.com'
   
   try {
     const response = await fetch(`http://localhost:5000/api/admin/send-review-email`, {

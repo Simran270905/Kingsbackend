@@ -300,17 +300,30 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
 
     // Get order details (remove delivered status requirement for testing)
     console.log('Looking for order with ID:', orderId)
-    const order = await Order.findOne({ 
-      _id: orderId
-    }).populate('items.productId', 'name images').lean()
-
-    console.log('Order lookup result:', order ? 'found' : 'not found')
+    
+    // First try without population to avoid errors
+    let order = await Order.findOne({ _id: orderId }).lean()
     
     if (!order) {
       console.log('Order not found in database')
       return res.status(404).json({
         error: 'Order not found'
       })
+    }
+    
+    console.log('Order found, trying to populate items...')
+    
+    // Try to populate items if they exist
+    try {
+      if (order.items && order.items.length > 0) {
+        order = await Order.findOne({ _id: orderId })
+          .populate('items.productId', 'name images')
+          .lean()
+      }
+      console.log('Order populated successfully')
+    } catch (populateError) {
+      console.log('Population failed, using basic order:', populateError.message)
+      // Continue with basic order data
     }
 
     // Log order status for debugging

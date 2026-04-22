@@ -334,14 +334,21 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
 
     // Get order details from database
     try {
+      console.log('Attempting to find order:', orderId)
+      console.log('Order model available:', !!Order)
+      
       const order = await Order.findOne({ _id: orderId }).lean()
+      console.log('Order query result:', !!order)
       
       if (!order) {
+        console.log('Order not found in database')
         return res.status(404).json({
           error: 'Order not found'
         })
       }
 
+      console.log('Order found, items:', order.items?.length || 0)
+      
       // Return success with real order data
       return res.json({
         valid: true,
@@ -357,8 +364,10 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
       
     } catch (orderError) {
       console.error('Error finding order:', orderError)
+      console.error('Error stack:', orderError.stack)
       return res.status(500).json({
-        error: 'Database error: ' + orderError.message
+        error: 'Database error: ' + orderError.message,
+        stack: process.env.NODE_ENV === 'development' ? orderError.stack : undefined
       })
     }
 

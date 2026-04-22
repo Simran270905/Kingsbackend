@@ -267,7 +267,12 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
   try {
     const { token, orderId } = req.query
 
+    console.log('=== VERIFY TOKEN REQUEST ===')
+    console.log('Token:', token ? token.substring(0, 50) + '...' : 'missing')
+    console.log('Order ID:', orderId)
+
     if (!token || !orderId) {
+      console.log('Missing token or orderId')
       return res.status(400).json({
         error: 'Token and orderId are required'
       })
@@ -275,7 +280,10 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
 
     // Validate token
     const tokenValidation = validateReviewToken(token)
+    console.log('Token validation result:', tokenValidation)
+    
     if (!tokenValidation.valid) {
+      console.log('Token validation failed:', tokenValidation.error)
       return res.status(401).json({
         error: tokenValidation.error || 'Invalid or expired token'
       })
@@ -291,11 +299,15 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
     }
 
     // Get order details (remove delivered status requirement for testing)
+    console.log('Looking for order with ID:', orderId)
     const order = await Order.findOne({ 
       _id: orderId
     }).populate('items.productId', 'name images').lean()
 
+    console.log('Order lookup result:', order ? 'found' : 'not found')
+    
     if (!order) {
+      console.log('Order not found in database')
       return res.status(404).json({
         error: 'Order not found'
       })

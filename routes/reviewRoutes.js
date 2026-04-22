@@ -332,22 +332,35 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
       })
     }
 
-    // For now, return mock data since we're having database issues
-    // TODO: Fix database connection and return real order data
-    return res.json({
-      valid: true,
-      orderId: orderId,
-      products: [
-        {
-          productId: 'mock-product-id',
-          name: 'Sample Product',
-          image: null,
-          quantity: 1,
-          price: 999
-        }
-      ],
-      message: 'Mock data - database connection needs fixing'
-    })
+    // Get order details from database
+    try {
+      const order = await Order.findOne({ _id: orderId }).lean()
+      
+      if (!order) {
+        return res.status(404).json({
+          error: 'Order not found'
+        })
+      }
+
+      // Return success with real order data
+      return res.json({
+        valid: true,
+        orderId: order._id,
+        products: order.items?.map(item => ({
+          productId: item.productId,
+          name: item.name || 'Product',
+          image: item.image || null,
+          quantity: item.quantity || 1,
+          price: item.price || 0
+        })) || []
+      })
+      
+    } catch (orderError) {
+      console.error('Error finding order:', orderError)
+      return res.status(500).json({
+        error: 'Database error: ' + orderError.message
+      })
+    }
 
   } catch (error) {
     console.error('Error in verify-token endpoint:', error)

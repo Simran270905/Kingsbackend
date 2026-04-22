@@ -10,6 +10,15 @@ import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
+// Health check for review routes
+router.get('/', (req, res) => {
+  res.json({ 
+    message: 'Review routes are working', 
+    timestamp: new Date(),
+    endpoints: ['test', 'verify-token', 'submit']
+  })
+})
+
 // Rate limiting for review submissions
 const submitReviewLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

@@ -1,6 +1,7 @@
 import Order, { default as OrderDefault } from '../../models/Order.js'
 import Product from '../../models/Product.js'
 import { sendSuccess, sendError, catchAsync } from '../../middleware/errorHandler.js'
+import { sendReviewEmail } from '../../services/reviewEmailService.js'
 
 /**
  * Handle Shiprocket webhook for order status updates
@@ -99,6 +100,21 @@ export const handleShiprocketWebhook = catchAsync(async (req, res) => {
           order.amountPaid = order.totalAmount
           order.paymentDate = new Date()
         }
+        
+        // AUTOMATIC REVIEW EMAIL: Send review email when Shiprocket confirms delivery
+        console.log(`Shiprocket confirmed delivery for order ${order._id} - sending review email...`)
+        
+        // Send review email asynchronously (don't block webhook response)
+        sendReviewEmail(order).then(success => {
+          if (success) {
+            console.log(`Review email sent successfully for order ${order._id} (Shiprocket webhook)`)
+          } else {
+            console.error(`Failed to send review email for order ${order._id} (Shiprocket webhook)`)
+          }
+        }).catch(error => {
+          console.error(`Error sending review email for order ${order._id} (Shiprocket webhook):`, error)
+        })
+        
         break
       
       case 'cancelled':

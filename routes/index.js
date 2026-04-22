@@ -3,6 +3,7 @@ import adminRoutes from './admin/index.js'
 import customerRoutes from './customer/index.js'
 import sharedRoutes from './shared/index.js'
 import shiprocketWebhookRoutes from './shiprocketWebhookRoutes.js'
+import reviewRoutes from './reviewRoutes.js'
 
 const router = express.Router()
 
@@ -69,5 +70,6 @@ router.get('/shiprocket/health', async (req, res) => {
 router.use('/admin', adminRoutes)
 router.use('/customers', customerRoutes)
 router.use('/', sharedRoutes)
+router.use('/reviews', reviewRoutes)
 
 export default router

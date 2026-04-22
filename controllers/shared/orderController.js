@@ -5,6 +5,7 @@ import shiprocketService from '../../services/shiprocketService.js'
 import { validateOrder } from '../../utils/validation.js'
 import { processOrderDiscount } from '../../middleware/paymentDiscount.js'
 import { processOrderPayment } from '../../utils/discountCalculator.js'
+import { sendReviewEmail } from '../../services/reviewEmailService.js'
 
 // GET all orders (Admin only)
 export const getOrders = catchAsync(async (req, res) => {
@@ -492,6 +493,33 @@ export const updateOrderStatus = catchAsync(async (req, res) => {
     { status },
     { new: true, runValidators: true }
   )
+  
+  // AUTOMATIC REVIEW EMAIL: Send review email when order is delivered
+  if (status === 'delivered' && currentOrder.status !== 'delivered') {
+    console.log(`Order ${id} marked as delivered - sending review email...`)
+    
+    try {
+      // Set deliveredAt timestamp if not already set
+      if (!order.deliveredAt) {
+        order.deliveredAt = new Date()
+        await order.save()
+      }
+      
+      // Send review email asynchronously (don't block response)
+      sendReviewEmail(order).then(success => {
+        if (success) {
+          console.log(`Review email sent successfully for order ${id}`)
+        } else {
+          console.error(`Failed to send review email for order ${id}`)
+        }
+      }).catch(error => {
+        console.error(`Error sending review email for order ${id}:`, error)
+      })
+    } catch (error) {
+      console.error(`Error preparing review email for order ${id}:`, error)
+      // Don't fail the status update, just log the error
+    }
+  }
   
   sendSuccess(res, order, 200, 'Order status updated successfully')
 })

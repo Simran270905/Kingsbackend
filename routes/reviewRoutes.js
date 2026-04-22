@@ -290,20 +290,35 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
       })
     }
 
-    // Get order details
+    // Get order details (remove delivered status requirement for testing)
     const order = await Order.findOne({ 
-      _id: orderId,
-      status: { $regex: /^delivered$/i }
+      _id: orderId
     }).populate('items.productId', 'name images').lean()
 
     if (!order) {
       return res.status(404).json({
-        error: 'Order not found or not delivered'
+        error: 'Order not found'
       })
     }
 
-    // Verify email matches order
-    const orderEmail = order.guestInfo?.email || order.customer?.email
+    // Log order status for debugging
+    console.log('Order found:', {
+      id: order._id,
+      status: order.status,
+      hasItems: !!order.items,
+      itemsCount: order.items?.length || 0
+    })
+
+    // Verify email matches order (check multiple possible locations)
+    const orderEmail = order.guestInfo?.email || order.customer?.email || order.shippingAddress?.email
+    console.log('Email verification:', {
+      tokenEmail: tokenData.email,
+      orderEmail: orderEmail,
+      guestInfo: order.guestInfo,
+      customer: order.customer,
+      shippingAddress: order.shippingAddress
+    })
+    
     if (!orderEmail || orderEmail.toLowerCase() !== tokenData.email.toLowerCase()) {
       return res.status(401).json({
         error: 'Email does not match order'

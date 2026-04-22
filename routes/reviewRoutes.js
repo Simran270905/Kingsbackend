@@ -290,102 +290,61 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
     }
 
     const tokenData = tokenValidation.data
+    console.log('Token data:', tokenData)
 
     // Verify token matches order
     if (tokenData.orderId !== orderId) {
+      console.log('Token order ID mismatch:', { tokenOrderId: tokenData.orderId, requestedOrderId: orderId })
       return res.status(401).json({
         error: 'Token does not match this order'
       })
     }
 
-    // Get order details (remove delivered status requirement for testing)
+    // Get order details - SIMPLE VERSION
     console.log('Looking for order with ID:', orderId)
     
-    // First try without population to avoid errors
-    let order = await Order.findOne({ _id: orderId }).lean()
-    
-    if (!order) {
-      console.log('Order not found in database')
-      return res.status(404).json({
-        error: 'Order not found'
-      })
-    }
-    
-    console.log('Order found, trying to populate items...')
-    
-    // Try to populate items if they exist
     try {
-      if (order.items && order.items.length > 0) {
-        order = await Order.findOne({ _id: orderId })
-          .populate('items.productId', 'name images')
-          .lean()
+      const order = await Order.findOne({ _id: orderId }).lean()
+      
+      if (!order) {
+        console.log('Order not found in database')
+        return res.status(404).json({
+          error: 'Order not found'
+        })
       }
-      console.log('Order populated successfully')
-    } catch (populateError) {
-      console.log('Population failed, using basic order:', populateError.message)
-      // Continue with basic order data
-    }
+      
+      console.log('Order found:', {
+        id: order._id,
+        status: order.status,
+        hasItems: !!order.items,
+        itemsCount: order.items?.length || 0
+      })
 
-    // Log order status for debugging
-    console.log('Order found:', {
-      id: order._id,
-      status: order.status,
-      hasItems: !!order.items,
-      itemsCount: order.items?.length || 0
-    })
-
-    // Verify email matches order (check multiple possible locations)
-    const orderEmail = order.guestInfo?.email || order.customer?.email || order.shippingAddress?.email
-    console.log('Email verification:', {
-      tokenEmail: tokenData.email,
-      orderEmail: orderEmail,
-      guestInfo: order.guestInfo,
-      customer: order.customer,
-      shippingAddress: order.shippingAddress
-    })
-    
-    if (!orderEmail || orderEmail.toLowerCase() !== tokenData.email.toLowerCase()) {
-      return res.status(401).json({
-        error: 'Email does not match order'
+      // Return success with basic order data
+      return res.json({
+        valid: true,
+        orderId: order._id,
+        products: order.items?.map(item => ({
+          productId: item.productId,
+          name: item.name || 'Product',
+          image: item.image || null,
+          quantity: item.quantity || 1,
+          price: item.price || 0
+        })) || []
+      })
+      
+    } catch (orderError) {
+      console.error('Error finding order:', orderError)
+      return res.status(500).json({
+        error: 'Database error: ' + orderError.message
       })
     }
-
-    // Check which products already have reviews
-    const existingReviews = await Review.find({
-      orderId,
-      status: { $in: ['pending', 'approved'] }
-    }).select('productId').lean()
-
-    const reviewedProductIds = existingReviews.map(r => r.productId.toString())
-
-    // Format products for review
-    const availableProducts = order.items
-      .filter(item => !reviewedProductIds.includes(item.productId._id.toString()))
-      .map(item => ({
-        productId: item.productId._id,
-        name: item.name,
-        image: item.image || item.productId?.images?.[0] || null,
-        quantity: item.quantity,
-        price: item.price
-      }))
-
-    res.json({
-      valid: true,
-      email: tokenData.email,
-      order: {
-        id: order._id,
-        date: order.createdAt,
-        totalAmount: order.totalAmount,
-        status: order.status
-      },
-      products: availableProducts,
-      alreadyReviewed: reviewedProductIds.length > 0
-    })
 
   } catch (error) {
-    console.error('Error verifying review token:', error)
+    console.error('Error in verify-token endpoint:', error)
+    console.error('Error stack:', error.stack)
     res.status(500).json({
-      error: 'Failed to verify token'
+      error: 'Internal server error: ' + error.message
     })
   }
 })

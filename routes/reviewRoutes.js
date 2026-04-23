@@ -23,6 +23,19 @@ router.get('/minimal-test', (req, res) => {
 })
 
 /**
+ * Health check to keep backend awake
+ */
+router.get('/health-check', (req, res) => {
+  console.log('🏥 Review routes health check - keeping server awake')
+  res.json({
+    success: true,
+    message: 'Review routes healthy',
+    timestamp: new Date(),
+    server: 'awake'
+  })
+})
+
+/**
  * Validate JWT token for review access (backward compatibility)
  * @param {string} token - JWT token to validate
  * @returns {object} - Token validation result
@@ -64,7 +77,7 @@ router.get('/', (req, res) => {
   res.json({
     message: 'Review routes are working',
     timestamp: new Date(),
-    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret', 'clear-test-review', 'test-approve', 'minimal-test']
+    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret', 'clear-test-review', 'test-approve', 'minimal-test', 'health-check']
   })
 })
 
@@ -596,15 +609,15 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
 })
 
 /**
- * PATCH /api/reviews/:id/approve
- * Approve a review (admin only) - TEMPORARILY UNPROTECTED FOR TESTING
+ * PATCH /api/reviews/:reviewId/approve
+ * Approve a review (admin only)
  */
-router.patch('/:id/approve', async (req, res) => {
+router.patch('/:reviewId/approve', protectAdmin, async (req, res) => {
   try {
-    const { id } = req.params
+    const { reviewId } = req.params
     const { moderationNote } = req.body
 
-    console.log('APPROVE REQUEST:', { id, moderationNote, body: req.body })
+    console.log('APPROVE REQUEST:', { reviewId, moderationNote, body: req.body })
 
     // TEMPORARY WORKAROUND: Skip database operations due to Review model issues
     // The main JWT token fix is working perfectly, so this is just for admin UI
@@ -614,7 +627,7 @@ router.patch('/:id/approve', async (req, res) => {
     res.json({
       success: true,
       message: 'Review approved successfully (temporary mode)',
-      reviewId: id,
+      reviewId: reviewId,
       note: 'This is a temporary workaround - database operations disabled'
     })
 
@@ -627,12 +640,12 @@ router.patch('/:id/approve', async (req, res) => {
 })
 
 /**
- * PATCH /api/reviews/:id/reject
- * Reject a review (admin only) - TEMPORARILY UNPROTECTED FOR TESTING
+ * PATCH /api/reviews/:reviewId/reject
+ * Reject a review (admin only)
  */
-router.patch('/:id/reject', async (req, res) => {
+router.patch('/:reviewId/reject', protectAdmin, async (req, res) => {
   try {
-    const { id } = req.params
+    const { reviewId } = req.params
     const { moderationNote } = req.body
 
     // TEMPORARY WORKAROUND: Skip database operations due to Review model issues
@@ -641,7 +654,7 @@ router.patch('/:id/reject', async (req, res) => {
     res.json({
       success: true,
       message: 'Review rejected successfully (temporary mode)',
-      reviewId: id,
+      reviewId: reviewId,
       note: 'This is a temporary workaround - database operations disabled'
     })
 

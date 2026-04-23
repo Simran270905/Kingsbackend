@@ -49,7 +49,7 @@ export const getAnalytics = catchAsync(async (req, res) => {
         dateData[dateStr] = {
           orders: dayPaidOrders.length,
           revenue: dayPaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
-          customers: new Set(dayPaidOrders.map(o => o.customer?.email || o.shippingAddress?.email).filter(Boolean)).size,
+          customers: new Set(dayPaidOrders.map(o => o.customer?.email || o.guestInfo?.email || o.shippingAddress?.email).filter(Boolean)).size,
           avgOrderValue: dayPaidOrders.length > 0 ? dayPaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) / dayPaidOrders.length : 0
         }
       }
@@ -93,7 +93,7 @@ export const getAnalytics = catchAsync(async (req, res) => {
         totalOrders,
         avgOrderValue: Math.round(avgOrderValue * 100) / 100,
         totalProductsSold,
-        totalCustomers: new Set(paidOrders.map(o => o.customer?.email || o.guestInfo?.email).filter(Boolean)).size
+        totalCustomers: new Set(paidOrders.map(o => o.customer?.email || o.guestInfo?.email || o.shippingAddress?.email).filter(Boolean)).size
       },
       dateData,
       topSellingProducts,

@@ -1,7 +1,7 @@
 // NEW FILE
 import crypto from 'crypto'
 
-const REVIEW_TOKEN_SECRET = process.env.REVIEW_TOKEN_SECRET || 'kkings-review-token-secret-2024'
+const REVIEW_TOKEN_SECRET = 'kkings-review-token-secret-2024' // Hardcoded for production consistency
 const TOKEN_EXPIRY_DAYS = 7
 
 /**

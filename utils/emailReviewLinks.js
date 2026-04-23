@@ -22,12 +22,19 @@ export function generateEmailReviewLink(orderId, email, deliveredAt = null, base
     // Generate JWT token
     const token = generateJWTReviewToken(orderId, email, deliveredAt)
     
-    // Properly encode URL parameters
+    // Properly encode URL parameters (Step 4 - Safe encoding)
     const encodedOrderId = encodeURIComponent(orderId)
     const encodedToken = encodeURIComponent(token)
     
-    // Construct complete review URL
+    // Construct complete review URL with safe encoding
     const reviewUrl = `${frontendUrl}/review?orderId=${encodedOrderId}&token=${encodedToken}`
+    
+    // Log encoding info for debugging
+    console.log('URL ENCODING DEBUG:')
+    console.log('- Original token length:', token.length)
+    console.log('- Encoded token length:', encodedToken.length)
+    console.log('- Encoding changed token:', token !== encodedToken)
+    console.log('- Order ID encoded:', orderId !== encodedOrderId)
     
     return {
       url: reviewUrl,

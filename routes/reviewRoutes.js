@@ -53,8 +53,42 @@ router.get('/', (req, res) => {
   res.json({ 
     message: 'Review routes are working', 
     timestamp: new Date(),
-    endpoints: ['test', 'verify-token', 'submit', 'debug-token']
+    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret']
   })
+})
+
+/**
+ * GET /api/reviews/debug-secret
+ * Debug route to check JWT_SECRET configuration (temporary)
+ */
+router.get('/debug-secret', (req, res) => {
+  try {
+    const jwtSecret = process.env.JWT_SECRET
+    
+    if (!jwtSecret) {
+      return res.json({
+        error: 'JWT_SECRET not configured',
+        secretLength: 0,
+        secretPreview: null,
+        nodeEnv: process.env.NODE_ENV || 'development'
+      })
+    }
+    
+    res.json({
+      secretLength: jwtSecret.length,
+      secretPreview: jwtSecret.substring(0, 3) + '...' + jwtSecret.substring(jwtSecret.length - 3),
+      nodeEnv: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString(),
+      message: 'JWT_SECRET is configured'
+    })
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      secretLength: 0,
+      secretPreview: null,
+      nodeEnv: process.env.NODE_ENV || 'development'
+    })
+  }
 })
 
 /**
@@ -393,9 +427,13 @@ router.get('/debug-db', async (req, res) => {
  */
 router.get('/verify-token', verifyTokenLimit, async (req, res) => {
   try {
-    const { token, orderId } = req.query
-    console.log('=== VERIFY TOKEN START ===')
-    console.log('Token:', token ? 'present' : 'missing')
+    // Step 6 - Fix backend verify route decoding
+    const token = decodeURIComponent(req.query.token || '')
+    const orderId = req.query.orderId
+    
+    console.log('=== VERIFY TOKEN START (STEP 6) ===')
+    console.log('Token length:', token.length)
+    console.log('Token preview:', token ? token.substring(0, 30) + '...' : 'missing')
     console.log('OrderId:', orderId)
 
     if (!token || !orderId) {
@@ -405,7 +443,10 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
       })
     }
 
+    console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length)
+    console.log('JWT_SECRET configured:', !!process.env.JWT_SECRET)
     console.log('Validating token...')
+    
     // Validate token (support both JWT and HMAC)
     let tokenValidation;
     
@@ -416,6 +457,7 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
     }
     
     console.log('Token validation result:', tokenValidation.valid)
+    console.log('Token validation error:', tokenValidation.error)
     
     if (!tokenValidation.valid) {
       console.log('Token validation failed:', tokenValidation.error)

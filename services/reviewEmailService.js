@@ -1,5 +1,5 @@
 // AUTOMATIC REVIEW EMAIL SERVICE
-import { generateReviewLink } from '../utils/generateReviewLink.js'
+import { generateEmailReviewLink } from '../utils/emailReviewLinks.js'
 import nodemailer from 'nodemailer'
 
 // Email transporter (using your existing email setup)
@@ -40,19 +40,25 @@ export async function sendReviewEmail(order) {
 
     console.log('Customer email found:', customerEmail)
 
-    // Generate secure review link
-    const reviewLink = generateReviewLink(
+    // Generate secure review link with JWT token
+    console.log('TOKEN GENERATED WITH SECRET LENGTH:', process.env.JWT_SECRET?.length)
+    console.log('JWT_SECRET configured:', !!process.env.JWT_SECRET)
+    
+    const reviewLinkData = generateEmailReviewLink(
       order._id.toString(),
       customerEmail,
       order.deliveredAt || new Date()
     )
 
-    if (!reviewLink) {
+    if (!reviewLinkData || !reviewLinkData.url) {
       console.error('Failed to generate review link for order:', order._id)
       return false
     }
 
-    console.log('Review link generated:', reviewLink)
+    console.log('TOKEN:', reviewLinkData.token.substring(0, 30))
+    console.log('TOKEN LENGTH:', reviewLinkData.token.length)
+    console.log('Review link generated:', reviewLinkData.url)
+    console.log('Token expires:', reviewLinkData.expires.toISOString())
 
     // Get customer name
     let customerName = 'Valued Customer'
@@ -95,7 +101,7 @@ export async function sendReviewEmail(order) {
             </p>
             
             <div style="text-align: center; margin: 35px 0;">
-              <a href="${reviewLink}" 
+              <a href="${reviewLinkData.url}" 
                  style="background: linear-gradient(135deg, #8B7355 0%, #D4AF37 100%); 
                         color: white; padding: 15px 35px; text-decoration: none; 
                         border-radius: 50px; font-weight: bold; font-size: 16px;

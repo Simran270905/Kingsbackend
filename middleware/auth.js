@@ -120,7 +120,17 @@ export const authenticate = (req, res, next) => {
 // Role-based access control
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    // Check for admin authentication (from protectAdmin middleware)
+    if (roles.includes('admin')) {
+      if (!req.admin) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to access this resource'
+        })
+      }
+    } 
+    // Check for user authentication (from protectCustomer middleware)
+    else if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this resource'

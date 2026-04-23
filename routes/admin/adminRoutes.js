@@ -70,7 +70,7 @@ router.put('/reviews/:id/approve', protectAdmin, async (req, res) => {
     }
 
     review.status = 'approved'
-    review.moderatedBy = req.user.id
+    review.moderatedBy = req.admin.id
     review.moderatedAt = new Date()
     if (moderationNote) {
       review.moderationNote = moderationNote
@@ -106,7 +106,7 @@ router.put('/reviews/:id/reject', protectAdmin, async (req, res) => {
     }
 
     review.status = 'rejected'
-    review.moderatedBy = req.user.id
+    review.moderatedBy = req.admin.id
     review.moderatedAt = new Date()
     if (moderationNote) {
       review.moderationNote = moderationNote

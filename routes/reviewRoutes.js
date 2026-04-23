@@ -619,20 +619,41 @@ router.patch('/:reviewId/approve', protectAdmin, async (req, res) => {
 
     console.log('APPROVE REQUEST:', { reviewId, moderationNote, body: req.body })
 
-    // TEMPORARY WORKAROUND: Skip database operations due to Review model issues
-    // The main JWT token fix is working perfectly, so this is just for admin UI
-    
-    console.log('TEMPORARY: Approving review without database operations')
+    // Find the review
+    const review = await Review.findById(reviewId)
+    if (!review) {
+      console.log('Review not found for ID:', reviewId)
+      return res.status(404).json({
+        error: 'Review not found',
+        reviewId: reviewId
+      })
+    }
+
+    console.log('Found review:', review._id, 'Current status:', review.status)
+
+    // Update review status
+    review.status = 'approved'
+    review.moderatedAt = new Date()
+    review.moderatedBy = req.user.id // Admin user ID from middleware
+    if (moderationNote) {
+      review.moderationNote = moderationNote
+    }
+
+    await review.save()
+
+    console.log('✅ Review approved successfully:', review._id)
 
     res.json({
       success: true,
-      message: 'Review approved successfully (temporary mode)',
-      reviewId: reviewId,
-      note: 'This is a temporary workaround - database operations disabled'
+      message: 'Review approved successfully',
+      reviewId: review._id,
+      status: review.status,
+      moderatedAt: review.moderatedAt
     })
 
   } catch (error) {
     console.error('Error approving review:', error)
+    console.error('Error stack:', error.stack)
     res.status(500).json({
       error: 'Failed to approve review: ' + error.message
     })
@@ -648,18 +669,43 @@ router.patch('/:reviewId/reject', protectAdmin, async (req, res) => {
     const { reviewId } = req.params
     const { moderationNote } = req.body
 
-    // TEMPORARY WORKAROUND: Skip database operations due to Review model issues
-    console.log('TEMPORARY: Rejecting review without database operations')
+    console.log('REJECT REQUEST:', { reviewId, moderationNote, body: req.body })
+
+    // Find the review
+    const review = await Review.findById(reviewId)
+    if (!review) {
+      console.log('Review not found for ID:', reviewId)
+      return res.status(404).json({
+        error: 'Review not found',
+        reviewId: reviewId
+      })
+    }
+
+    console.log('Found review:', review._id, 'Current status:', review.status)
+
+    // Update review status
+    review.status = 'rejected'
+    review.moderatedAt = new Date()
+    review.moderatedBy = req.user.id // Admin user ID from middleware
+    if (moderationNote) {
+      review.moderationNote = moderationNote
+    }
+
+    await review.save()
+
+    console.log('✅ Review rejected successfully:', review._id)
 
     res.json({
       success: true,
-      message: 'Review rejected successfully (temporary mode)',
-      reviewId: reviewId,
-      note: 'This is a temporary workaround - database operations disabled'
+      message: 'Review rejected successfully',
+      reviewId: review._id,
+      status: review.status,
+      moderatedAt: review.moderatedAt
     })
 
   } catch (error) {
     console.error('Error rejecting review:', error)
+    console.error('Error stack:', error.stack)
     res.status(500).json({
       error: 'Failed to reject review: ' + error.message
     })

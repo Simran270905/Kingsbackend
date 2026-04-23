@@ -718,7 +718,6 @@ router.patch('/:reviewId/reject', protectAdmin, async (req, res) => {
  */
 router.get('/admin/pending', protectAdmin, async (req, res) => {
   try {
-
     const page = Math.max(1, parseInt(req.query.page) || 1)
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20))
 
@@ -737,6 +736,90 @@ router.get('/admin/pending', protectAdmin, async (req, res) => {
     console.error('Error fetching pending reviews:', error)
     res.status(500).json({
       error: 'Failed to fetch pending reviews'
+    })
+  }
+})
+
+/**
+ * GET /api/reviews/admin/approved
+ * Get approved reviews for admin (admin only)
+ */
+router.get('/admin/approved', protectAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1)
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20))
+
+    const reviews = await Review.getApprovedReviews(page, limit)
+
+    res.json({
+      reviews,
+      pagination: {
+        page,
+        limit,
+        hasMore: reviews.length === limit
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching approved reviews:', error)
+    res.status(500).json({
+      error: 'Failed to fetch approved reviews'
+    })
+  }
+})
+
+/**
+ * GET /api/reviews/admin/rejected
+ * Get rejected reviews for admin (admin only)
+ */
+router.get('/admin/rejected', protectAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1)
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20))
+
+    const reviews = await Review.getRejectedReviews(page, limit)
+
+    res.json({
+      reviews,
+      pagination: {
+        page,
+        limit,
+        hasMore: reviews.length === limit
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching rejected reviews:', error)
+    res.status(500).json({
+      error: 'Failed to fetch rejected reviews'
+    })
+  }
+})
+
+/**
+ * GET /api/reviews/admin/all
+ * Get all reviews for admin (admin only)
+ */
+router.get('/admin/all', protectAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1)
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20))
+
+    const reviews = await Review.getAllReviews(page, limit)
+
+    res.json({
+      reviews,
+      pagination: {
+        page,
+        limit,
+        hasMore: reviews.length === limit
+      }
+    })
+
+  } catch (error) {
+    console.error('Error fetching all reviews:', error)
+    res.status(500).json({
+      error: 'Failed to fetch all reviews'
     })
   }
 })

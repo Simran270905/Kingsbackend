@@ -205,7 +205,30 @@ reviewSchema.statics.getPendingReviews = function(page = 1, limit = 20) {
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate('productId', 'name images')
+    .lean()
+}
+
+reviewSchema.statics.getApprovedReviews = function(page = 1, limit = 20) {
+  return this.find({ status: 'approved' })
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean()
+}
+
+reviewSchema.statics.getRejectedReviews = function(page = 1, limit = 20) {
+  return this.find({ status: 'rejected' })
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean()
+}
+
+reviewSchema.statics.getAllReviews = function(page = 1, limit = 20) {
+  return this.find({})
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit)
     .lean()
 }
 

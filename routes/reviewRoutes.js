@@ -561,12 +561,18 @@ router.patch('/:id/approve', async (req, res) => {
     const { id } = req.params
     const { moderationNote } = req.body
 
+    console.log('APPROVE REQUEST:', { id, moderationNote, body: req.body })
+
     const review = await Review.findById(id)
     if (!review) {
+      console.log('Review not found for ID:', id)
       return res.status(404).json({
-        error: 'Review not found'
+        error: 'Review not found',
+        id: id
       })
     }
+
+    console.log('Found review:', review._id)
 
     review.status = 'approved'
     review.moderatedBy = 'temp-admin' // Temporary fix since req.user is undefined
@@ -577,6 +583,8 @@ router.patch('/:id/approve', async (req, res) => {
 
     await review.save()
 
+    console.log('Review approved successfully')
+
     res.json({
       success: true,
       message: 'Review approved successfully',
@@ -585,8 +593,9 @@ router.patch('/:id/approve', async (req, res) => {
 
   } catch (error) {
     console.error('Error approving review:', error)
+    console.error('Error stack:', error.stack)
     res.status(500).json({
-      error: 'Failed to approve review'
+      error: 'Failed to approve review: ' + error.message
     })
   }
 })

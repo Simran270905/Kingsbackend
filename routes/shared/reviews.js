@@ -13,6 +13,7 @@ const router = express.Router()
 // Public routes
 router.get('/product/:productId', getProductReviews)
 router.get('/verify', verifyReviewLink)
+router.get('/verify-token', verifyReviewLink) // Add this for frontend compatibility
 router.post('/submit', submitReview)
 
 // Protected routes

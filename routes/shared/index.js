@@ -6,7 +6,7 @@ import orderRoutes from './orderRoutes.js'
 import paymentRoutes from './payments.js'
 import uploadRoutes from './uploads.js'
 // import authRoutes from './auth.js' // Removed for guest checkout
-import reviewRoutes from './reviews.js'
+import reviewRoutes from '../reviewRoutes.js'
 import couponRoutes from './coupons.js'
 import contentRoutes from './contentRoutes.js'
 import contactRoutes from '../contactRoutes.js'

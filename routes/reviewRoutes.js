@@ -370,18 +370,26 @@ router.get('/product/:productId', async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1)
     const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 10))
 
+    console.log('🔍 Product Reviews Route - Fetching reviews for productId:', productId)
+    console.log('🔍 Product Reviews Route - Page:', page, 'Limit:', limit)
+
     // Validate productId
     if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log('❌ Product Reviews Route - Invalid productId format:', productId)
       return res.status(400).json({
         error: 'Invalid product ID'
       })
     }
 
     // Get reviews and stats in parallel
+    console.log('🔍 Product Reviews Route - Fetching from database...')
     const [reviews, stats] = await Promise.all([
       Review.getApprovedByProduct(productId, page, limit),
       Review.getProductStats(productId)
     ])
+
+    console.log('🔍 Product Reviews Route - Reviews found:', reviews.length)
+    console.log('🔍 Product Reviews Route - Stats:', stats)
 
     // Format reviews
     const formattedReviews = reviews.map(review => ({
@@ -805,7 +813,16 @@ router.get('/admin/all', protectAdmin, async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1)
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20))
 
-    const reviews = await Review.getAllReviews(page, limit)
+    console.log('🔍 Admin All Reviews - Fetching reviews...')
+    const reviews = await Review.find({})
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate('productId', 'name images')
+      .lean()
+
+    console.log('🔍 Admin All Reviews - Found reviews:', reviews.length)
+    console.log('🔍 Admin All Reviews - Sample review:', reviews[0])
 
     res.json({
       reviews,

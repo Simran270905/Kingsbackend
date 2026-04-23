@@ -326,6 +326,8 @@ export const submitReview = async (req, res) => {
   try {
     const { orderId, productId, rating, comment, token } = req.body
 
+    console.log('🔍 Submit Review - Request Data:', { orderId, productId, rating, comment, token: token.substring(0, 20) + '...' })
+
     // Validate required fields
     if (!orderId || !productId || !rating || !comment || !token) {
       return res.status(400).json({
@@ -388,6 +390,10 @@ export const submitReview = async (req, res) => {
       })
     }
 
+    console.log('🔍 Submit Review - Order found:', order._id)
+    console.log('🔍 Submit Review - Order items:', order.items?.map(item => ({ productId: item.productId, name: item.name })))
+    console.log('🔍 Submit Review - Requested productId:', productId)
+
     // Verify email matches order
     const orderEmail = order.guestInfo?.email || order.customer?.email
     if (!orderEmail || orderEmail.toLowerCase() !== tokenData.email.toLowerCase()) {
@@ -421,9 +427,12 @@ export const submitReview = async (req, res) => {
     const sanitizedComment = comment.trim().replace(/[<>]/g, '')
 
     // Create review
+    console.log('🔍 Submit Review - Creating review with productId:', productId)
+    console.log('🔍 Submit Review - Order productId from items:', order.items[0]?.productId)
+    
     const review = new Review.default({
       orderId,
-      productId,
+      productId: order.items[0]?.productId, // Use productId from order items
       email: tokenData.email,
       rating,
       comment: sanitizedComment,
@@ -431,6 +440,7 @@ export const submitReview = async (req, res) => {
       status: 'pending'
     })
 
+    console.log('🔍 Submit Review - Review created with productId:', review.productId)
     await review.save()
     
     // Return success response

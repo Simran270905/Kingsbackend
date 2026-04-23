@@ -12,6 +12,17 @@ import { protectAdmin } from '../middleware/authMiddleware.js'
 const router = express.Router()
 
 /**
+ * Minimal test route - no imports, no database
+ */
+router.get('/minimal-test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Minimal test working',
+    timestamp: new Date()
+  })
+})
+
+/**
  * Validate JWT token for review access (backward compatibility)
  * @param {string} token - JWT token to validate
  * @returns {object} - Token validation result
@@ -53,7 +64,7 @@ router.get('/', (req, res) => {
   res.json({
     message: 'Review routes are working',
     timestamp: new Date(),
-    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret', 'clear-test-review', 'test-approve']
+    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret', 'clear-test-review', 'test-approve', 'minimal-test']
   })
 })
 

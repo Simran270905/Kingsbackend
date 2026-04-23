@@ -1,7 +1,7 @@
 import Product from '../../models/Product.js'
 import User from '../../models/User.js'
 import Order from '../../models/Order.js'
-import { validateReviewToken } from '../../../backend/utils/reviewToken.js'
+import { validateReviewToken } from '../../utils/reviewToken.js'
 
 export const addProductReview = async (req, res) => {
   try {

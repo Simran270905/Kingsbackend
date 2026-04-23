@@ -53,8 +53,17 @@ router.get('/', (req, res) => {
   res.json({
     message: 'Review routes are working',
     timestamp: new Date(),
-    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret', 'clear-test-review']
+    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret', 'clear-test-review', 'test-approve']
   })
+})
+
+/**
+ * GET /api/reviews/test-approve
+ * Test route for debugging approve endpoint
+ */
+router.get('/test-approve', async (req, res) => {
+  const { testApprove } = await import('./testApprove.js')
+  return testApprove(req, res)
 })
 
 /**

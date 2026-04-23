@@ -150,7 +150,8 @@ export async function sendReviewEmail(order) {
     // Send email
     const result = await transporter.sendMail(emailContent)
     
-    console.log(`Review email sent to ${order.guestInfo.email} for order ${order._id}`)
+    const sentEmail = order.guestInfo?.email || order.customer?.email || order.shippingAddress?.email
+    console.log(`Review email sent to ${sentEmail} for order ${order._id}`)
     console.log(`Message ID: ${result.messageId}`)
     
     return true

@@ -60,8 +60,8 @@ router.post('/send-review-email', protectAdmin, async (req, res) => {
       })
     }
     
-    // Find the order
-    const order = await Order.findById(orderId).lean()
+    // Find the order (without .lean() to allow saving)
+    const order = await Order.findById(orderId)
     
     if (!order) {
       console.error('Order not found:', orderId)

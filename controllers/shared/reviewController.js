@@ -2,6 +2,7 @@ import Product from '../../models/Product.js'
 import User from '../../models/User.js'
 import Order from '../../models/Order.js'
 import { validateReviewToken } from '../../utils/reviewToken.js'
+import jwt from 'jsonwebtoken'
 
 export const addProductReview = async (req, res) => {
   try {
@@ -206,6 +207,39 @@ export const deleteReview = async (req, res) => {
   }
 }
 
+/**
+ * Validate JWT token for review access (backward compatibility)
+ * @param {string} token - JWT token to validate
+ * @returns {object} - Token validation result
+ */
+const validateJWTReviewToken = (token) => {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret')
+    
+    // Check required fields
+    if (!decoded.orderId || !decoded.email) {
+      return { valid: false, error: 'Missing required token fields' }
+    }
+
+    // Check expiry
+    if (decoded.expires && Date.now() > decoded.expires) {
+      return { valid: false, error: 'Token expired' }
+    }
+
+    return {
+      valid: true,
+      data: {
+        orderId: decoded.orderId,
+        email: decoded.email,
+        expires: decoded.expires ? new Date(decoded.expires) : null,
+        generated: decoded.generated ? new Date(decoded.generated) : null
+      }
+    }
+  } catch (error) {
+    return { valid: false, error: 'Invalid JWT token: ' + error.message }
+  }
+}
+
 export const verifyReviewLink = async (req, res) => {
   try {
     const { orderId, token } = req.query;
@@ -214,10 +248,16 @@ export const verifyReviewLink = async (req, res) => {
       return res.status(400).json({ valid: false, error: 'Order ID and token are required' });
     }
 
-    // Use static import for token validation
+    let tokenValidation;
     
-    // Validate token
-    const tokenValidation = validateReviewToken(token)
+    // Try JWT validation first (for backward compatibility)
+    if (token.startsWith('eyJ')) {
+      tokenValidation = validateJWTReviewToken(token)
+    } else {
+      // Try custom HMAC token validation
+      tokenValidation = validateReviewToken(token)
+    }
+    
     if (!tokenValidation.valid) {
       return res.status(401).json({
         valid: false,
@@ -313,10 +353,15 @@ export const submitReview = async (req, res) => {
       })
     }
 
-    // Use static import for token validation
+    // Validate token (support both JWT and HMAC)
+    let tokenValidation;
     
-    // Validate token
-    const tokenValidation = validateReviewToken(token)
+    if (token.startsWith('eyJ')) {
+      tokenValidation = validateJWTReviewToken(token)
+    } else {
+      tokenValidation = validateReviewToken(token)
+    }
+    
     if (!tokenValidation.valid) {
       return res.status(401).json({
         error: tokenValidation.error || 'Invalid or expired token'

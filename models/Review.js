@@ -183,7 +183,7 @@ reviewSchema.statics.getProductStats = function(productId) {
                           $size: {
                             $filter: {
                               input: '$ratingDistribution',
-                              cond: { $eq: ['$$item', '$$this'] }
+                              cond: { $eq: ['$$this', '$$this'] }
                             }
                           }
                         }

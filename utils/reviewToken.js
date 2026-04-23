@@ -1,8 +1,45 @@
 // NEW FILE
 import crypto from 'crypto'
+import jwt from 'jsonwebtoken'
 
 const REVIEW_TOKEN_SECRET = 'kkings-review-token-secret-2024' // Hardcoded for production consistency
 const TOKEN_EXPIRY_DAYS = 7
+
+/**
+ * Generate a JWT token for review access (recommended method)
+ * @param {string} orderId - Order ID
+ * @param {string} email - Customer email
+ * @param {Date} deliveredAt - Delivery date (optional)
+ * @returns {string} - JWT token
+ */
+export function generateJWTReviewToken(orderId, email, deliveredAt = null) {
+  try {
+    // Validate inputs
+    if (!orderId || !email) {
+      throw new Error('Order ID and email are required')
+    }
+
+    // Create payload with expiry
+    const expiryDate = deliveredAt 
+      ? new Date(deliveredAt.getTime() + (TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000))
+      : new Date(Date.now() + (TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000))
+
+    const payload = {
+      orderId: orderId.toString(),
+      email: email.toLowerCase().trim(),
+      expires: expiryDate.getTime(),
+      generated: Date.now()
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret')
+    
+    return token
+  } catch (error) {
+    console.error('Error generating JWT review token:', error.message)
+    throw new Error('Failed to generate JWT review token')
+  }
+}
 
 /**
  * Generate a secure HMAC token for review access

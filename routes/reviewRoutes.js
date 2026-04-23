@@ -2,7 +2,8 @@
 import express from 'express'
 import Review from '../models/Review.js'
 import Order from '../models/Order.js'
-import { validateReviewToken, generateReviewToken } from '../utils/reviewToken.js'
+import { validateReviewToken, generateReviewToken, generateJWTReviewToken } from '../utils/reviewToken.js'
+import jwt from 'jsonwebtoken'
 import rateLimit from 'express-rate-limit'
 import cloudinary from '../utils/cloudinary.js'
 import { uploadReviewImages } from '../middleware/uploadReviewImages.js'
@@ -10,13 +11,69 @@ import { protectAdmin } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
+/**
+ * Validate JWT token for review access (backward compatibility)
+ * @param {string} token - JWT token to validate
+ * @returns {object} - Token validation result
+ */
+const validateJWTReviewToken = (token) => {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret')
+    
+    // Check required fields
+    if (!decoded.orderId || !decoded.email) {
+      return { valid: false, error: 'Missing required token fields' }
+    }
+
+    // Check expiry
+    if (decoded.expires && Date.now() > decoded.expires) {
+      return { valid: false, error: 'Token expired' }
+    }
+
+    return {
+      valid: true,
+      data: {
+        orderId: decoded.orderId,
+        email: decoded.email,
+        expires: decoded.expires ? new Date(decoded.expires) : null,
+        generated: decoded.generated ? new Date(decoded.generated) : null
+      }
+    }
+  } catch (error) {
+    return { valid: false, error: 'Invalid JWT token: ' + error.message }
+  }
+}
+
 // Health check for review routes
 router.get('/', (req, res) => {
   res.json({ 
     message: 'Review routes are working', 
     timestamp: new Date(),
-    endpoints: ['test', 'verify-token', 'submit']
+    endpoints: ['test', 'verify-token', 'submit', 'debug-token']
   })
+})
+
+/**
+ * GET /api/reviews/debug-token
+ * Generate valid tokens for testing
+ */
+router.get('/debug-token', async (req, res) => {
+  try {
+    // Generate both JWT and HMAC tokens for testing
+    const jwtToken = generateJWTReviewToken('69e679bf0a9eb574729bbd7e', 'simrankadamkb12@gmail.com')
+    const hmacToken = generateReviewToken('69e679bf0a9eb574729bbd7e', 'simrankadamkb12@gmail.com')
+    
+    res.json({
+      success: true,
+      jwt_token: jwtToken,
+      hmac_token: hmacToken,
+      jwt_secret: process.env.JWT_SECRET ? 'CONFIGURED' : 'NOT_CONFIGURED',
+      hmac_secret: process.env.REVIEW_TOKEN_SECRET || 'DEFAULT_SECRET',
+      message: 'Use jwt_token for frontend testing'
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // Rate limiting for review submissions
@@ -72,8 +129,15 @@ router.post('/submit', submitReviewLimit, async (req, res) => {
       })
     }
 
-    // Validate token
-    const tokenValidation = validateReviewToken(token)
+    // Validate token (support both JWT and HMAC)
+    let tokenValidation;
+    
+    if (token.startsWith('eyJ')) {
+      tokenValidation = validateJWTReviewToken(token)
+    } else {
+      tokenValidation = validateReviewToken(token)
+    }
+    
     if (!tokenValidation.valid) {
       return res.status(401).json({
         error: tokenValidation.error || 'Invalid or expired token'
@@ -338,8 +402,15 @@ router.get('/verify-token', verifyTokenLimit, async (req, res) => {
     }
 
     console.log('Validating token...')
-    // Validate token
-    const tokenValidation = validateReviewToken(token)
+    // Validate token (support both JWT and HMAC)
+    let tokenValidation;
+    
+    if (token.startsWith('eyJ')) {
+      tokenValidation = validateJWTReviewToken(token)
+    } else {
+      tokenValidation = validateReviewToken(token)
+    }
+    
     console.log('Token validation result:', tokenValidation.valid)
     
     if (!tokenValidation.valid) {

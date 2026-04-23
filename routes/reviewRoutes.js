@@ -50,11 +50,20 @@ const validateJWTReviewToken = (token) => {
 
 // Health check for review routes
 router.get('/', (req, res) => {
-  res.json({ 
-    message: 'Review routes are working', 
+  res.json({
+    message: 'Review routes are working',
     timestamp: new Date(),
-    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret']
+    endpoints: ['test', 'verify-token', 'submit', 'debug-token', 'debug-secret', 'clear-test-review']
   })
+})
+
+/**
+ * GET /api/reviews/clear-test-review
+ * Clear existing test review for testing purposes
+ */
+router.get('/clear-test-review', async (req, res) => {
+  const { clearTestReview } = await import('./clearTestReview.js')
+  return clearTestReview(req, res)
 })
 
 /**

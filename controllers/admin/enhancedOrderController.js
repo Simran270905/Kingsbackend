@@ -9,7 +9,7 @@ export const getAllOrdersEnhanced = catchAsync(async (req, res) => {
   try {
     const { 
       page = 1, 
-      limit = 10, 
+      limit = 200, 
       status, 
       paymentStatus, 
       paymentMethod,

@@ -32,7 +32,11 @@ export function generateJWTReviewToken(orderId, email, deliveredAt = null) {
     }
 
     // Generate JWT token
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret')
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is not configured')
+    }
+    const token = jwt.sign(payload, jwtSecret)
     
     return token
   } catch (error) {

@@ -18,7 +18,11 @@ const router = express.Router()
  */
 const validateJWTReviewToken = (token) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret')
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      return { valid: false, error: 'JWT_SECRET environment variable is not configured' }
+    }
+    const decoded = jwt.verify(token, jwtSecret)
     
     // Check required fields
     if (!decoded.orderId || !decoded.email) {

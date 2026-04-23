@@ -62,8 +62,40 @@ router.get('/', (req, res) => {
  * Test route for debugging approve endpoint
  */
 router.get('/test-approve', async (req, res) => {
-  const { testApprove } = await import('./testApprove.js')
-  return testApprove(req, res)
+  try {
+    console.log('TEST APPROVE ENDPOINT CALLED')
+    res.json({
+      success: true,
+      message: 'Test approve endpoint working',
+      timestamp: new Date()
+    })
+  } catch (error) {
+    console.error('Test approve error:', error)
+    res.status(500).json({
+      error: error.message
+    })
+  }
+})
+
+/**
+ * POST /api/reviews/test-approve
+ * Test POST endpoint for debugging approve functionality
+ */
+router.post('/test-approve', async (req, res) => {
+  try {
+    console.log('TEST APPROVE POST CALLED:', req.body)
+    res.json({
+      success: true,
+      message: 'Test approve POST working',
+      body: req.body,
+      timestamp: new Date()
+    })
+  } catch (error) {
+    console.error('Test approve POST error:', error)
+    res.status(500).json({
+      error: error.message
+    })
+  }
 })
 
 /**

@@ -634,7 +634,7 @@ router.patch('/:reviewId/approve', protectAdmin, async (req, res) => {
     // Update review status
     review.status = 'approved'
     review.moderatedAt = new Date()
-    review.moderatedBy = req.user.id // Admin user ID from middleware
+    review.moderatedBy = req.admin.id // Admin user ID from middleware
     if (moderationNote) {
       review.moderationNote = moderationNote
     }
@@ -686,7 +686,7 @@ router.patch('/:reviewId/reject', protectAdmin, async (req, res) => {
     // Update review status
     review.status = 'rejected'
     review.moderatedAt = new Date()
-    review.moderatedBy = req.user.id // Admin user ID from middleware
+    review.moderatedBy = req.admin.id // Admin user ID from middleware
     if (moderationNote) {
       review.moderationNote = moderationNote
     }

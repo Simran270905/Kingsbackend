@@ -24,6 +24,7 @@ export const protectAdmin = (req, res, next) => {
     const authHeader = req.headers.authorization
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ No authorization token provided')
       return res.status(401).json({
         success: false,
         message: 'No authorization token provided'
@@ -31,9 +32,22 @@ export const protectAdmin = (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1]
+    console.log('🔍 Admin auth token length:', token.length)
+    console.log('🔍 Admin auth token preview:', token.substring(0, 20) + '...')
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    console.log('🔍 Admin auth decoded:', decoded)
 
+    // Check if user has admin role
+    if (!decoded.role || decoded.role !== 'admin') {
+      console.log('❌ User is not admin:', decoded.role)
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      })
+    }
+
+    console.log('✅ Admin authentication successful')
     req.admin = decoded
     next()
 

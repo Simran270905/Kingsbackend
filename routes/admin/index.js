@@ -43,7 +43,6 @@ router.post('/test-login', (req, res) => {
 
 // Protected admin routes
 router.get('/customers', protectAdmin, getAllCustomers)
-router.get('/analytics', protectAdmin, getAdminAnalytics)
 router.get('/analytics/validate-revenue', protectAdmin, validateRevenue)
 
 // Manual review email sending

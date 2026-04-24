@@ -7,6 +7,7 @@ import { getAdminAnalytics, validateRevenue } from '../../controllers/admin/admi
 import { sendSuccess, sendError } from '../../middleware/errorHandler.js'
 import orderRoutes from './enhancedOrderRoutes.js'
 import analyticsRoutes from '../analytics.routes.js'
+import contactRoutes from '../contactRoutes.js'
 import Order, { default as OrderDefault } from '../../models/Order.js'
 import { sendReviewEmail } from '../../services/reviewEmailService.js'
 
@@ -131,5 +132,8 @@ router.use('/analytics', analyticsRoutes)
 
 // New order routes
 router.use('/orders', orderRoutes)
+
+// Contact messages routes
+router.use('/contact', contactRoutes)
 
 export default router

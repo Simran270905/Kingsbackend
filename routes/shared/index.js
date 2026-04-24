@@ -9,8 +9,8 @@ import uploadRoutes from './uploads.js'
 import reviewRoutes from '../reviewRoutes.js'
 import couponRoutes from './coupons.js'
 import contentRoutes from './contentRoutes.js'
-import contactRoutes from '../contactRoutes.js'
 import newPaymentRoutes from '../payment.routes.js'
+import publicContactRoutes from '../publicContactRoutes.js'
 
 const router = express.Router()
 
@@ -26,6 +26,6 @@ router.use('/upload', uploadRoutes)
 router.use('/reviews', reviewRoutes)
 router.use('/coupons', couponRoutes)
 router.use('/content', contentRoutes)
-router.use('/contact', contactRoutes)
+router.use('/contact', publicContactRoutes)
 
 export default router

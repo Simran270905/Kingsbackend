@@ -7,15 +7,12 @@ import {
   updateMessageStatus,
   deleteContactMessage
 } from '../controllers/contactController.js';
-import { adminOnly } from '../middleware/auth.js';
-
-// Public route - Create contact message
-router.post('/', createContactMessage);
+import { protectAdmin } from '../middleware/auth.js';
 
 // Admin routes - Manage contact messages
-router.get('/', adminOnly, getContactMessages);
-router.get('/:id', adminOnly, getContactMessage);
-router.put('/:id/status', adminOnly, updateMessageStatus);
-router.delete('/:id', adminOnly, deleteContactMessage);
+router.get('/', protectAdmin, getContactMessages);
+router.get('/:id', protectAdmin, getContactMessage);
+router.put('/:id/status', protectAdmin, updateMessageStatus);
+router.delete('/:id', protectAdmin, deleteContactMessage);
 
 export default router;

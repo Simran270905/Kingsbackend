@@ -87,6 +87,15 @@ export const getAnalytics = catchAsync(async (req, res) => {
       refunded: allOrders.filter(o => o.status === 'refunded').length
     }
     
+    // Get stock analytics
+    const allProducts = await Product.find().lean()
+    const stockAnalytics = {
+      totalSold: totalProductsSold,
+      stockOut: allProducts.filter(p => p.stock <= 0).length,
+      lowStock: allProducts.filter(p => p.stock > 0 && p.stock <= 5).length,
+      inStock: allProducts.filter(p => p.stock > 5).length
+    }
+    
     const analyticsData = {
       summary: {
         totalRevenue: Math.round(totalRevenue * 100) / 100,
@@ -98,6 +107,7 @@ export const getAnalytics = catchAsync(async (req, res) => {
       dateData,
       topSellingProducts,
       statusBreakdown,
+      stock: stockAnalytics,
       lastUpdated: new Date()
     }
     

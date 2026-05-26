@@ -178,6 +178,8 @@ export const getProducts = catchAsync(async (req, res) => {
 // GET single product by ID
 export const getProductById = catchAsync(async (req, res) => {
   const product = await Product.findById(req.params.id)
+    .populate('category', 'name slug')
+    .populate('brand', 'name slug')
   
   if (!product) {
     return sendError(res, 'Product not found', 404)

@@ -140,6 +140,7 @@ export const getProducts = catchAsync(async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit)
   const products = await Product.find(query)
     .populate('category', 'name slug')
+    .populate('brand', 'name slug')
     .select('name description originalPrice sellingPrice purchasePrice images category brand stock sold sizes hasSizes isActive material purity weight sku averageRating totalReviews isBestSeller isOnSale discountPercentage salesCount createdAt')
     .skip(skip)
     .limit(parseInt(limit))
@@ -191,7 +192,7 @@ export const getProductById = catchAsync(async (req, res) => {
 // GET products by category
 export const getProductsByCategory = catchAsync(async (req, res) => {
   const { category } = req.params
-  const { limit = 10 } = req.query
+  const { limit = 100 } = req.query
   
   const products = await Product.find({ 
     category,
@@ -202,6 +203,8 @@ export const getProductsByCategory = catchAsync(async (req, res) => {
       { isActive: { $ne: false } }
     ]
   })
+    .populate('category', 'name slug')
+    .populate('brand', 'name slug')
     .limit(parseInt(limit))
     .sort({ createdAt: -1 })
   
